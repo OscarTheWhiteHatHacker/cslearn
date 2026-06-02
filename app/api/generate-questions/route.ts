@@ -8,6 +8,7 @@ LESSON CONTENT:
 ${lessonContent}
 
 CRITICAL RULES:
+- These questions are for GCSE students (ages 14-16). They MUST be GCSE-level difficulty, NOT A-Level or university level.
 - Each question must be a PURE COMPREHENSION question — test only understanding of facts AND concepts EXPLICITLY stated in the lesson content above. The student must be able to answer from the lesson alone.
 - Do NOT ask students to write code, pseudocode, draw diagrams, create flowcharts, or do anything they would need external knowledge or tools for.
 - Do NOT ask students to write code, pseudocode, programs, algorithms, or draw/create flowcharts or diagrams — they can only type text into a box.
@@ -26,6 +27,7 @@ PREVIOUS QUESTIONS (DO NOT REPEAT THESE):
 ${existingQuestions}
 
 CRITICAL RULES:
+- These questions are for GCSE students (ages 14-16). They MUST be GCSE-level difficulty, NOT A-Level or university level.
 - Each question must be a PURE COMPREHENSION question — test only understanding of facts AND concepts EXPLICITLY stated in the lesson content above. The student must be able to answer from the lesson alone.
 - Do NOT ask students to write code, pseudocode, draw diagrams, create flowcharts, or do anything they would need external knowledge or tools for.
 - Do NOT ask students to write code, pseudocode, programs, algorithms, or draw/create flowcharts or diagrams — they can only type text into a box.
