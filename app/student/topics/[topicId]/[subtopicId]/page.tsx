@@ -149,7 +149,7 @@ export default async function StudentSubtopicPage({
       .eq('subtopic_id', params.subtopicId)
       .in('teacher_id', teacherIds)
       .limit(1)
-    subtopicReleased = (subRelease as unknown[] | null)?.length > 0
+    subtopicReleased = subRelease ? (subRelease as unknown[]).length > 0 : false
   }
 
   // Get released lesson IDs
