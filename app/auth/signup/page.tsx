@@ -79,7 +79,7 @@ export default function SignupPage() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: existingUsername } = await (supabase.from('profiles') as any)
         .select('id')
-        .eq('username', username.trim())
+        .eq('username', username.trim().toLowerCase())
         .limit(1)
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -91,7 +91,7 @@ export default function SignupPage() {
 
       // Build request to server-side signup API
       const signupPayload: Record<string, unknown> = {
-        username: username.trim(),
+        username: username.trim().toLowerCase(),
         password,
         fullName: fullName.trim(),
         role: isStudent ? 'student' : 'teacher',
@@ -132,7 +132,7 @@ export default function SignupPage() {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           await (supabase.from('profiles') as any)
             .update({
-              username: username.trim(),
+              username: username.trim().toLowerCase(),
               organization_id: result.organizationId || undefined,
             })
             .eq('id', user.id)

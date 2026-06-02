@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email TEXT,
   full_name TEXT DEFAULT '',
+  username TEXT UNIQUE,
   role TEXT DEFAULT 'student',
   created_at TIMESTAMPTZ DEFAULT NOW()
 );

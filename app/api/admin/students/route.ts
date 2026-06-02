@@ -4,7 +4,8 @@ import { createServerClient } from '@supabase/ssr'
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { action, secret, orgId, studentId, username, password, fullName } = body
+    const { action, secret, orgId, studentId, password, fullName } = body
+    const username = (body.username || '').toLowerCase().trim()
 
     if (secret !== process.env.WIPE_SECRET) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
