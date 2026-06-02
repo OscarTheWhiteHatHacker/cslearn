@@ -5,14 +5,13 @@ import { useState } from 'react'
 interface LessonReleaseToggleProps {
   lessonId: string
   lessonTitle: string
-  lessonIndex: number
+  lessonIndex?: number
   initiallyReleased: boolean
 }
 
 export default function LessonReleaseToggle({
   lessonId,
   lessonTitle,
-  lessonIndex,
   initiallyReleased,
 }: LessonReleaseToggleProps) {
   const [released, setReleased] = useState(initiallyReleased)

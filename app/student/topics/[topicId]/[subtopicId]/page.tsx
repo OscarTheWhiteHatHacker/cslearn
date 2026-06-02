@@ -77,6 +77,7 @@ async function getTeacherIds(): Promise<string[]> {
     .eq('role', 'teacher')
     .eq('organization_id', studentOrgId)
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return ((teachersInOrg as any[]) || []).map((t: any) => t.id)
 }
 

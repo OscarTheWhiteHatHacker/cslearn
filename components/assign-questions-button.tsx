@@ -75,7 +75,6 @@ export default function AssignQuestionsButton({ subtopicId, lessonIndex }: Assig
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const parsedQuestions = (data.questionSet?.questions_json || []) as any[]
-      const setId = data.questionSet?.id
 
       setEditingQuestions(parsedQuestions as Question[])
       setEditingSet(data.questionSet)
