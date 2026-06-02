@@ -119,12 +119,13 @@ function getFallbackContent(subtopicTitle: string): Record<string, unknown> {
   }
 }
 
-export async function POST() {
-  const supabase = await createClient()
+export async function POST(request: Request) {
+  const body = await request.json().catch(() => ({}))
+  if (body.secret !== process.env.WIPE_SECRET) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
 
-  // Temporarily bypass auth for dev seeding — REVERT AFTER SEEDING
-  await supabase.auth.getUser()
-  // Auth check removed for local seeding
+  const supabase = await createClient()
 
   const results: {
     topics_inserted: number
@@ -223,7 +224,9 @@ export async function POST() {
           .single()
 
         const content = existingSubtopic as Record<string, unknown> | null
-        const hasContent = content && typeof content === 'object' && 'explanation' in content && content.explanation
+        const hasLessons = content && typeof content === 'object' && 'lessons' in content && Array.isArray(content.lessons) && content.lessons.length > 0
+        const hasFlatContent = content && typeof content === 'object' && 'explanation' in content && content.explanation
+        const hasContent = hasLessons || hasFlatContent
 
         if (!hasContent) {
           // Wait briefly to avoid rate limiting
