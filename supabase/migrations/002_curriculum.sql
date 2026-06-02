@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS question_sets (
   subtopic_id UUID NOT NULL REFERENCES subtopics(id),
   teacher_id UUID NOT NULL REFERENCES profiles(id),
   questions_json JSONB DEFAULT '[]',
+  status TEXT DEFAULT 'draft',
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 

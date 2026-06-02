@@ -262,6 +262,7 @@ export async function POST(request: Request) {
       subtopic_id: subtopicId,
       teacher_id: user.id,
       questions_json: questions,
+      status: 'draft',
     })
     .select()
     .single()

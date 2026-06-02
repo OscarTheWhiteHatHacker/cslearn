@@ -64,6 +64,8 @@ async function getStudentQuestionSets(): Promise<QuestionSetInfo[]> {
     qsQuery = qsQuery.in('teacher_id', teacherIds)
   }
 
+  qsQuery = qsQuery.eq('status', 'published')
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: allSets } = await qsQuery
 
