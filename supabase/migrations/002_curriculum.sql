@@ -97,3 +97,30 @@ CREATE POLICY "Students manage own answers" ON student_answers
 DROP POLICY IF EXISTS "Teachers view student answers" ON student_answers;
 CREATE POLICY "Teachers view student answers" ON student_answers
   FOR SELECT USING (auth.jwt() -> 'user_metadata' ->> 'role' = 'teacher');
+
+CREATE TABLE IF NOT EXISTS lessons (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  subtopic_id UUID NOT NULL REFERENCES subtopics(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  content_json JSONB DEFAULT '{}',
+  order_number INTEGER NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+ALTER TABLE lessons ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Lessons readable" ON lessons;
+CREATE POLICY "Lessons readable" ON lessons FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Teachers manage lessons" ON lessons;
+CREATE POLICY "Teachers manage lessons" ON lessons FOR ALL USING (auth.jwt() -> 'user_metadata' ->> 'role' = 'teacher');
+
+CREATE TABLE IF NOT EXISTS released_lessons (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  lesson_id UUID NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,
+  teacher_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(lesson_id, teacher_id)
+);
+ALTER TABLE released_lessons ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Teachers manage released lessons" ON released_lessons;
+CREATE POLICY "Teachers manage released lessons" ON released_lessons FOR ALL USING (auth.jwt() -> 'user_metadata' ->> 'role' = 'teacher');
+DROP POLICY IF EXISTS "Students view released lessons" ON released_lessons;
+CREATE POLICY "Students view released lessons" ON released_lessons FOR SELECT USING (auth.jwt() -> 'user_metadata' ->> 'role' = 'student');

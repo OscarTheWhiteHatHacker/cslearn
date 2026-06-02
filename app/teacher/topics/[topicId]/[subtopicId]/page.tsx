@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import ReleaseToggle from '@/components/release-toggle'
+import LessonReleaseToggle from '@/components/lesson-release-toggle'
 import AssignQuestionsButton from '@/components/assign-questions-button'
 
 interface LessonContent {
@@ -13,8 +14,10 @@ interface LessonContent {
 }
 
 interface Lesson {
+  id: string
   title: string
-  content: LessonContent
+  order_number: number
+  content_json: LessonContent
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -54,12 +57,33 @@ async function isReleased(subtopicId: string) {
   return data && (data as unknown[]).length > 0
 }
 
+async function getReleasedLessonIds(subtopicId: string): Promise<Set<string>> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return new Set()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: lessons } = await (supabase.from('lessons') as any)
+    .select('id')
+    .eq('subtopic_id', subtopicId)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const lessonIds = (lessons || []).map((l: any) => l.id)
+
+  if (lessonIds.length === 0) return new Set()
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: released } = await (supabase.from('released_lessons') as any)
+    .select('lesson_id')
+    .in('lesson_id', lessonIds)
+    .eq('teacher_id', user.id)
+
+  return new Set((released || []).map((r: { lesson_id: string }) => r.lesson_id))
+}
+
 function renderInline(text: string) {
   const parts: React.ReactNode[] = []
   const remaining = text
   let idx = 0
 
-  // Match **bold** or `code` — whichever comes first
   const regex = /(\*\*(.+?)\*\*|`(.+?)`)/g
   let match: RegExpExecArray | null
   let lastIndex = 0
@@ -69,10 +93,8 @@ function renderInline(text: string) {
       parts.push(remaining.slice(lastIndex, match.index))
     }
     if (match[2] !== undefined) {
-      // Bold
       parts.push(<strong key={idx++}>{match[2]}</strong>)
     } else if (match[3] !== undefined) {
-      // Code
       parts.push(<code key={idx++} className="bg-gray-100 text-red-600 px-1 rounded text-xs font-mono">{match[3]}</code>)
     }
     lastIndex = match.index + match[0].length
@@ -106,35 +128,33 @@ export default async function TeacherSubtopicPage({
   searchParams: { lesson?: string }
 }) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [subtopic, topic, released]: [any, any, boolean] = await Promise.all([
+  const [subtopic, topic, released, releasedLessonIds]: [any, any, boolean, Set<string>] = await Promise.all([
     getSubtopic(params.subtopicId),
     getTopic(params.topicId),
     isReleased(params.subtopicId),
+    getReleasedLessonIds(params.subtopicId),
   ])
 
   if (!subtopic || !topic) {
     notFound()
   }
 
-  const rawJson = subtopic.content_json as Record<string, unknown> | null
+  // Fetch lessons from the lessons table
+  const supabase = await createClient()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: dbLessons } = await (supabase.from('lessons') as any)
+    .select('*')
+    .eq('subtopic_id', params.subtopicId)
+    .order('order_number')
 
-  // Detect format: new (lessons array) vs old (flat content)
-  const lessons: Lesson[] = (rawJson?.lessons as Lesson[]) || []
+  const lessons: Lesson[] = (dbLessons || []) as Lesson[]
   const hasLessons = lessons.length > 0
 
-  // Also check for old flat format (learning_objectives directly on content_json)
-  const hasFlatContent = !hasLessons && rawJson && Array.isArray(rawJson.learning_objectives)
-
-  // Get current lesson index
   const currentLessonIndex = hasLessons
     ? Math.min(Math.max(parseInt(searchParams.lesson || '0', 10) || 0, 0), lessons.length - 1)
     : 0
 
-  const content = hasLessons
-    ? lessons[currentLessonIndex].content
-    : hasFlatContent
-    ? (rawJson as unknown as LessonContent)
-    : null
+  const content = hasLessons ? lessons[currentLessonIndex].content_json : null
 
   const lessonSelectorUrl = (index: number) =>
     `/teacher/topics/${topic.id}/${subtopic.id}?lesson=${index}`
@@ -162,22 +182,37 @@ export default async function TeacherSubtopicPage({
         </div>
       </div>
 
-      {/* Lesson tabs */}
+      {/* Lesson tabs with release toggles */}
       {hasLessons && (
-        <div className="flex gap-1 border-b border-gray-200 pb-px">
-          {lessons.map((lesson, i) => (
-            <Link
-              key={i}
-              href={lessonSelectorUrl(i)}
-              className={`px-4 py-2 text-sm font-medium rounded-t-lg border border-b-0 transition-colors ${
-                i === currentLessonIndex
-                  ? 'bg-white border-gray-200 text-indigo-700 -mb-px'
-                  : 'bg-gray-50 border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              {lesson.title}
-            </Link>
-          ))}
+        <div className="space-y-2">
+          <div className="flex gap-1 border-b border-gray-200 pb-px">
+            {lessons.map((lesson, i) => (
+              <Link
+                key={lesson.id}
+                href={lessonSelectorUrl(i)}
+                className={`px-4 py-2 text-sm font-medium rounded-t-lg border border-b-0 transition-colors ${
+                  i === currentLessonIndex
+                    ? 'bg-white border-gray-200 text-indigo-700 -mb-px'
+                    : 'bg-gray-50 border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                {lesson.title}
+              </Link>
+            ))}
+          </div>
+          {/* Lesson-level release toggles */}
+          <div className="flex gap-2 px-1">
+            {lessons.map((lesson, i) => (
+              <div key={lesson.id} className="flex items-center gap-1.5">
+                <LessonReleaseToggle
+                  lessonId={lesson.id}
+                  lessonTitle={lesson.title}
+                  lessonIndex={i}
+                  initiallyReleased={releasedLessonIds.has(lesson.id)}
+                />
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

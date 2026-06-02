@@ -11,15 +11,17 @@ interface LessonContent {
 }
 
 interface Lesson {
+  id: string
   title: string
-  content: LessonContent
+  order_number: number
+  content_json: LessonContent
+  released: boolean
 }
 
 interface SubtopicData {
   id: string
   topic_id: string
   title: string
-  content_json: Record<string, unknown>
   order_number: number
 }
 
@@ -32,36 +34,31 @@ interface TopicData {
 
 async function getSubtopic(subtopicId: string): Promise<SubtopicData | null> {
   const supabase = await createClient()
-
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data } = await (supabase.from('subtopics') as any)
     .select('*')
     .eq('id', subtopicId)
     .limit(1)
-
   const items = data as SubtopicData[] | null
   return items?.[0] || null
 }
 
 async function getTopic(topicId: string): Promise<TopicData | null> {
   const supabase = await createClient()
-
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data } = await (supabase.from('topics') as any)
     .select('*')
     .eq('id', topicId)
     .limit(1)
-
   const items = data as TopicData[] | null
   return items?.[0] || null
 }
 
-async function checkReleased(subtopicId: string) {
+async function getTeacherIds(): Promise<string[]> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return false
+  if (!user) return []
 
-  // Get student's organization_id
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: profileList } = await (supabase.from('profiles') as any)
     .select('organization_id')
@@ -72,56 +69,37 @@ async function checkReleased(subtopicId: string) {
   const studentProfile = (profileList as any[] | null)?.[0]
   const studentOrgId = studentProfile?.organization_id
 
-  // Find teachers in same organization
-  let teacherIds: string[] = []
-  if (studentOrgId) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: teachersInOrg } = await (supabase.from('profiles') as any)
-      .select('id')
-      .eq('role', 'teacher')
-      .eq('organization_id', studentOrgId)
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    teacherIds = ((teachersInOrg as any[]) || []).map((t: any) => t.id)
-  }
-
-  if (teacherIds.length === 0) return false
+  if (!studentOrgId) return []
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data } = await (supabase.from('released_subtopics') as any)
+  const { data: teachersInOrg } = await (supabase.from('profiles') as any)
     .select('id')
-    .eq('subtopic_id', subtopicId)
-    .in('teacher_id', teacherIds)
-    .limit(1)
+    .eq('role', 'teacher')
+    .eq('organization_id', studentOrgId)
 
-  return data && (data as unknown[]).length > 0
+  return ((teachersInOrg as any[]) || []).map((t: any) => t.id)
 }
 
 function renderInline(text: string) {
   const parts: React.ReactNode[] = []
-  const remaining = text
-  let idx = 0
-
-  // Match **bold** or `code` — whichever comes first
   const regex = /(\*\*(.+?)\*\*|`(.+?)`)/g
   let match: RegExpExecArray | null
   let lastIndex = 0
+  let idx = 0
 
-  while ((match = regex.exec(remaining)) !== null) {
+  while ((match = regex.exec(text)) !== null) {
     if (match.index > lastIndex) {
-      parts.push(remaining.slice(lastIndex, match.index))
+      parts.push(text.slice(lastIndex, match.index))
     }
     if (match[2] !== undefined) {
-      // Bold
       parts.push(<strong key={idx++}>{match[2]}</strong>)
     } else if (match[3] !== undefined) {
-      // Code
       parts.push(<code key={idx++} className="bg-gray-100 text-red-600 px-1 rounded text-xs font-mono">{match[3]}</code>)
     }
     lastIndex = match.index + match[0].length
   }
-  if (lastIndex < remaining.length) {
-    parts.push(remaining.slice(lastIndex))
+  if (lastIndex < text.length) {
+    parts.push(text.slice(lastIndex))
   }
   return parts.length > 0 ? parts : text
 }
@@ -148,40 +126,73 @@ export default async function StudentSubtopicPage({
   params: { topicId: string; subtopicId: string }
   searchParams: { lesson?: string }
 }) {
-  const [subtopic, topic, released] = await Promise.all([
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  const [subtopic, topic, teacherIds] = await Promise.all([
     getSubtopic(params.subtopicId),
     getTopic(params.topicId),
-    checkReleased(params.subtopicId),
+    getTeacherIds(),
   ])
 
   if (!subtopic || !topic) {
     notFound()
   }
 
-  // Redirect if not released
-  if (!released) {
+  // Check subtopic-level release (legacy)
+  let subtopicReleased = false
+  if (user && teacherIds.length > 0) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: subRelease } = await (supabase.from('released_subtopics') as any)
+      .select('id')
+      .eq('subtopic_id', params.subtopicId)
+      .in('teacher_id', teacherIds)
+      .limit(1)
+    subtopicReleased = (subRelease as unknown[] | null)?.length > 0
+  }
+
+  // Get released lesson IDs
+  const releasedLessonIds = new Set<string>()
+  if (user && teacherIds.length > 0) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: released } = await (supabase.from('released_lessons') as any)
+      .select('lesson_id')
+      .in('teacher_id', teacherIds)
+
+    for (const r of (released || []) as { lesson_id: string }[]) {
+      releasedLessonIds.add(r.lesson_id)
+    }
+  }
+
+  // Fetch lessons from DB that are released
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: dbLessons } = await (supabase.from('lessons') as any)
+    .select('*')
+    .eq('subtopic_id', params.subtopicId)
+    .order('order_number')
+
+  const allLessons = (dbLessons || []) as Lesson[]
+
+  // Filter to only released lessons
+  const lessons = subtopicReleased
+    ? allLessons
+    : allLessons.filter((l) => releasedLessonIds.has(l.id))
+
+  // If no lessons are released and subtopic isn't released either, redirect
+  if (lessons.length === 0 && !subtopicReleased) {
     redirect(`/student/topics/${params.topicId}`)
   }
 
-  const rawJson = subtopic.content_json as Record<string, unknown> | null
+  if (lessons.length === 0) {
+    redirect(`/student/topics/${params.topicId}`)
+  }
 
-  // Detect format: new (lessons array) vs old (flat content)
-  const lessons: Lesson[] = (rawJson?.lessons as Lesson[]) || []
-  const hasLessons = lessons.length > 0
+  const currentLessonIndex = Math.min(
+    Math.max(parseInt(searchParams.lesson || '0', 10) || 0, 0),
+    lessons.length - 1
+  )
 
-  // Also check for old flat format
-  const hasFlatContent = !hasLessons && rawJson && Array.isArray(rawJson.learning_objectives)
-
-  // Get current lesson index
-  const currentLessonIndex = hasLessons
-    ? Math.min(Math.max(parseInt(searchParams.lesson || '0', 10) || 0, 0), lessons.length - 1)
-    : 0
-
-  const content = hasLessons
-    ? lessons[currentLessonIndex].content
-    : hasFlatContent
-    ? (rawJson as unknown as LessonContent)
-    : null
+  const content = lessons[currentLessonIndex].content_json
 
   const lessonSelectorUrl = (index: number) =>
     `/student/topics/${topic.id}/${subtopic.id}?lesson=${index}`
@@ -204,11 +215,11 @@ export default async function StudentSubtopicPage({
       </div>
 
       {/* Lesson tabs */}
-      {hasLessons && (
+      {lessons.length > 1 && (
         <div className="flex gap-1 border-b border-gray-200 pb-px">
           {lessons.map((lesson, i) => (
             <Link
-              key={i}
+              key={lesson.id}
               href={lessonSelectorUrl(i)}
               className={`px-4 py-2 text-sm font-medium rounded-t-lg border border-b-0 transition-colors ${
                 i === currentLessonIndex
@@ -222,7 +233,7 @@ export default async function StudentSubtopicPage({
         </div>
       )}
 
-      {hasLessons && (
+      {lessons.length > 1 && (
         <p className="text-sm text-gray-500">
           Lesson {currentLessonIndex + 1} of {lessons.length}: <strong>{lessons[currentLessonIndex].title}</strong>
         </p>
@@ -230,34 +241,25 @@ export default async function StudentSubtopicPage({
 
       {content && content.learning_objectives ? (
         <div className="space-y-8">
-          {/* Learning Objectives */}
           <section className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
             <h2 className="text-lg font-semibold text-gray-900">Learning Objectives</h2>
             <ul className="mt-4 space-y-2">
               {content.learning_objectives.map((obj: string, i: number) => (
                 <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700 mt-0.5">
-                    {i + 1}
-                  </span>
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700 mt-0.5">{i + 1}</span>
                   {obj}
                 </li>
               ))}
             </ul>
           </section>
 
-          {/* Explanation */}
           <section className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
             <h2 className="text-lg font-semibold text-gray-900">Explanation</h2>
             <div className="mt-4 prose prose-sm max-w-none text-gray-700">
-              {content.explanation ? (
-                renderExplanation(content.explanation)
-              ) : (
-                <p className="text-gray-500 italic">No explanation available.</p>
-              )}
+              {content.explanation ? renderExplanation(content.explanation) : <p className="text-gray-500 italic">No explanation available.</p>}
             </div>
           </section>
 
-          {/* Key Points */}
           <section className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
             <h2 className="text-lg font-semibold text-gray-900">Key Points</h2>
             <ul className="mt-4 space-y-2">
@@ -272,7 +274,6 @@ export default async function StudentSubtopicPage({
             </ul>
           </section>
 
-          {/* Examples */}
           <section className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
             <h2 className="text-lg font-semibold text-gray-900">Examples</h2>
             <div className="mt-4 space-y-3">
@@ -285,7 +286,6 @@ export default async function StudentSubtopicPage({
             </div>
           </section>
 
-          {/* Common Misconceptions */}
           <section className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
             <h2 className="text-lg font-semibold text-gray-900">Common Misconceptions</h2>
             <div className="mt-4 space-y-3">
@@ -301,10 +301,7 @@ export default async function StudentSubtopicPage({
       ) : (
         <div className="rounded-lg border-2 border-dashed border-gray-300 p-12 text-center">
           <h2 className="text-lg font-semibold text-gray-700">Lesson content not yet generated</h2>
-          <p className="mt-2 text-sm text-gray-500">
-            The lesson content for this subtopic has not been created yet.
-            Please check back later.
-          </p>
+          <p className="mt-2 text-sm text-gray-500">The lesson content for this subtopic has not been created yet.</p>
         </div>
       )}
     </div>
