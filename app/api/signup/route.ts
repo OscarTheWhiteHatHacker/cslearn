@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     })
 
     // 1. Generate placeholder email
-    const placeholderEmail = `${username}@${role}.gcse.local`
+    const placeholderEmail = `${username}@${role}.cslearn.io`
 
     // 2. Create user in auth (auto-confirmed by admin API)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

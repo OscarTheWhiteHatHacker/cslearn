@@ -38,7 +38,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Username already taken' }, { status: 409 })
       }
 
-      const placeholderEmail = `${username.trim()}@student.gcse.local`
+      const placeholderEmail = `${username.trim()}@student.cslearn.io`
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: authData, error: createError } = await (supabase.auth.admin as any).createUser({
