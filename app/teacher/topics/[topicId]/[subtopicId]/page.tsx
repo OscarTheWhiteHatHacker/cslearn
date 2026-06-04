@@ -21,101 +21,66 @@ interface Lesson {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function getSubtopic(subtopicId: string): Promise<any> {
-  const supabase = await createClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data } = await (supabase.from('subtopics') as any)
-    .select('*')
-    .eq('id', subtopicId)
-    .limit(1)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return (data as any[] | null)?.[0] || null
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function getTopic(topicId: string): Promise<any> {
-  const supabase = await createClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data } = await (supabase.from('topics') as any)
-    .select('*')
-    .eq('id', topicId)
-    .limit(1)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return (data as any[] | null)?.[0] || null
-}
-
-async function isReleased(subtopicId: string) {
+async function getPageData(subtopicId: string, topicId: string): Promise<any> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return false
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data } = await (supabase.from('released_subtopics') as any)
-    .select('id')
-    .eq('subtopic_id', subtopicId)
-    .eq('teacher_id', user.id)
-    .limit(1)
-  return data && (data as unknown[]).length > 0
-}
 
-async function getReleasedLessonIds(subtopicId: string): Promise<Set<string>> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return new Set()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: lessons } = await (supabase.from('lessons') as any)
-    .select('id')
-    .eq('subtopic_id', subtopicId)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const lessonIds = (lessons || []).map((l: any) => l.id)
-
-  if (lessonIds.length === 0) return new Set()
+  // Parallel queries
+  const [subtopicResult, topicResult, lessonsResult] = await Promise.all([
+    (supabase.from('subtopics') as any).select('*').eq('id', subtopicId).limit(1),
+    (supabase.from('topics') as any).select('*').eq('id', topicId).limit(1),
+    (supabase.from('lessons') as any).select('*').eq('subtopic_id', subtopicId).order('order_number'),
+  ])
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: released } = await (supabase.from('released_lessons') as any)
-    .select('lesson_id')
-    .in('lesson_id', lessonIds)
-    .eq('teacher_id', user.id)
+  const subtopic = (subtopicResult.data as any[] | null)?.[0]
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const topic = (topicResult.data as any[] | null)?.[0]
+  const lessons: Lesson[] = (lessonsResult.data as Lesson[]) || []
 
-  return new Set((released || []).map((r: { lesson_id: string }) => r.lesson_id))
+  // Release status queries (parallel)
+  let subtopicReleased = false
+  let releasedLessonIds = new Set<string>()
+
+  if (user) {
+    const [releaseResult, lessonIdsResult] = await Promise.all([
+      (supabase.from('released_subtopics') as any)
+        .select('id').eq('subtopic_id', subtopicId).eq('teacher_id', user.id).limit(1),
+      (supabase.from('released_lessons') as any)
+        .select('lesson_id').eq('teacher_id', user.id),
+    ])
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    subtopicReleased = ((releaseResult.data as any[] | null)?.length || 0) > 0
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    releasedLessonIds = new Set((lessonIdsResult.data as any[] || []).map((r: any) => r.lesson_id))
+  }
+
+  return { subtopic, topic, lessons, subtopicReleased, releasedLessonIds }
 }
 
 function renderInline(text: string) {
   const parts: React.ReactNode[] = []
-  const remaining = text
-  let idx = 0
-
   const regex = /(\*\*(.+?)\*\*|`(.+?)`)/g
   let match: RegExpExecArray | null
   let lastIndex = 0
+  let idx = 0
 
-  while ((match = regex.exec(remaining)) !== null) {
-    if (match.index > lastIndex) {
-      parts.push(remaining.slice(lastIndex, match.index))
-    }
-    if (match[2] !== undefined) {
-      parts.push(<strong key={idx++}>{match[2]}</strong>)
-    } else if (match[3] !== undefined) {
-      parts.push(<code key={idx++} className="bg-gray-100 text-red-600 px-1 rounded text-xs font-mono">{match[3]}</code>)
-    }
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIndex) parts.push(text.slice(lastIndex, match.index))
+    if (match[2] !== undefined) parts.push(<strong key={idx++}>{match[2]}</strong>)
+    else if (match[3] !== undefined) parts.push(<code key={idx++} className="bg-gray-100 text-red-600 px-1 rounded text-xs font-mono">{match[3]}</code>)
     lastIndex = match.index + match[0].length
   }
-  if (lastIndex < remaining.length) {
-    parts.push(remaining.slice(lastIndex))
-  }
+  if (lastIndex < text.length) parts.push(text.slice(lastIndex))
   return parts.length > 0 ? parts : text
 }
 
 function renderExplanation(text: string) {
   return text.split('\n').map((line: string, i: number) => {
-    if (line.startsWith('## ')) {
-      return <h3 key={i} className="text-base font-semibold text-gray-900 mt-4 mb-2">{line.replace('## ', '')}</h3>
-    }
-    if (line.startsWith('### ')) {
-      return <h4 key={i} className="text-sm font-semibold text-gray-800 mt-3 mb-1">{line.replace('### ', '')}</h4>
-    }
-    if (line.trim() === '') {
-      return <br key={i} />
-    }
+    if (line.startsWith('## ')) return <h3 key={i} className="text-base font-semibold text-gray-900 mt-4 mb-2">{line.replace('## ', '')}</h3>
+    if (line.startsWith('### ')) return <h4 key={i} className="text-sm font-semibold text-gray-800 mt-3 mb-1">{line.replace('### ', '')}</h4>
+    if (line.trim() === '') return <br key={i} />
     return <p key={i} className="mb-2">{renderInline(line)}</p>
   })
 }
@@ -127,180 +92,170 @@ export default async function TeacherSubtopicPage({
   params: { topicId: string; subtopicId: string }
   searchParams: { lesson?: string }
 }) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [subtopic, topic, released, releasedLessonIds]: [any, any, boolean, Set<string>] = await Promise.all([
-    getSubtopic(params.subtopicId),
-    getTopic(params.topicId),
-    isReleased(params.subtopicId),
-    getReleasedLessonIds(params.subtopicId),
-  ])
+  const { subtopic, topic, lessons, subtopicReleased, releasedLessonIds } = await getPageData(
+    params.subtopicId, params.topicId
+  )
 
-  if (!subtopic || !topic) {
-    notFound()
-  }
+  if (!subtopic || !topic) notFound()
 
-  // Fetch lessons from the lessons table
-  const supabase = await createClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: dbLessons } = await (supabase.from('lessons') as any)
-    .select('*')
-    .eq('subtopic_id', params.subtopicId)
-    .order('order_number')
-
-  const lessons: Lesson[] = (dbLessons || []) as Lesson[]
-  const hasLessons = lessons.length > 0
-
-  const currentLessonIndex = hasLessons
-    ? Math.min(Math.max(parseInt(searchParams.lesson || '0', 10) || 0, 0), lessons.length - 1)
-    : 0
-
-  const content = hasLessons ? lessons[currentLessonIndex].content_json : null
-
-  const lessonSelectorUrl = (index: number) =>
-    `/teacher/topics/${topic.id}/${subtopic.id}?lesson=${index}`
+  const selectedLessonIdx = Math.min(
+    Math.max(parseInt(searchParams.lesson || '0', 10) || 0, 0),
+    Math.max(lessons.length - 1, 0)
+  )
+  const selectedLesson = lessons[selectedLessonIdx] || null
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div>
-        <Link
-          href={`/teacher/topics/${topic.id}`}
-          className="text-sm font-medium text-blue-600 hover:text-blue-800"
-        >
+        <Link href={`/teacher/topics/${topic.id}`} className="text-sm font-medium text-blue-600 hover:text-blue-800">
           &larr; Back to {topic.title}
         </Link>
         <div className="flex items-start justify-between gap-4 mt-2">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">{subtopic.title}</h1>
             <p className="mt-1 text-sm text-gray-500">
-              J277/{topic.component} &middot; {topic.title}
+              J277/{topic.component} &middot; {topic.title} &middot; {lessons.length} lessons
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <AssignQuestionsButton subtopicId={subtopic.id} lessonIndex={hasLessons ? currentLessonIndex : undefined} />
-            <ReleaseToggle subtopicId={subtopic.id} initiallyReleased={released} />
+            <AssignQuestionsButton subtopicId={subtopic.id} lessonIndex={selectedLessonIdx} />
+            <ReleaseToggle subtopicId={subtopic.id} initiallyReleased={subtopicReleased} />
           </div>
         </div>
       </div>
 
-      {/* Lesson tabs with release toggles */}
-      {hasLessons && (
-        <div className="space-y-2">
-          <div className="flex gap-1 border-b border-gray-200 pb-px">
-            {lessons.map((lesson, i) => (
-              <Link
-                key={lesson.id}
-                href={lessonSelectorUrl(i)}
-                className={`px-4 py-2 text-sm font-medium rounded-t-lg border border-b-0 transition-colors ${
-                  i === currentLessonIndex
-                    ? 'bg-white border-gray-200 text-indigo-700 -mb-px'
-                    : 'bg-gray-50 border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                }`}
-              >
-                {lesson.title}
-              </Link>
-            ))}
-          </div>
-          {/* Lesson-level release toggles */}
-          <div className="flex gap-2 px-1">
-            {lessons.map((lesson, i) => (
-              <div key={lesson.id} className="flex items-center gap-1.5">
-                <LessonReleaseToggle
-                  lessonId={lesson.id}
-                  lessonTitle={lesson.title}
-                  lessonIndex={i}
-                  initiallyReleased={releasedLessonIds.has(lesson.id)}
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {hasLessons && (
-        <p className="text-sm text-gray-500">
-          Lesson {currentLessonIndex + 1} of {lessons.length}: <strong>{lessons[currentLessonIndex].title}</strong>
-        </p>
-      )}
-
-      {content && content.learning_objectives ? (
-        <div className="space-y-8">
-          {/* Learning Objectives */}
-          <section className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-            <h2 className="text-lg font-semibold text-gray-900">Learning Objectives</h2>
-            <ul className="mt-4 space-y-2">
-              {content.learning_objectives.map((obj: string, i: number) => (
-                <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700 mt-0.5">
-                    {i + 1}
-                  </span>
-                  {obj}
-                </li>
-              ))}
-            </ul>
-          </section>
-
-          {/* Explanation */}
-          <section className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-            <h2 className="text-lg font-semibold text-gray-900">Explanation</h2>
-            <div className="mt-4 prose prose-sm max-w-none text-gray-700">
-              {content.explanation ? (
-                renderExplanation(content.explanation)
-              ) : (
-                <p className="text-gray-500 italic">No explanation available.</p>
-              )}
-            </div>
-          </section>
-
-          {/* Key Points */}
-          <section className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-            <h2 className="text-lg font-semibold text-gray-900">Key Points</h2>
-            <ul className="mt-4 space-y-2">
-              {content.key_points.map((point: string, i: number) => (
-                <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
-                  <svg className="h-5 w-5 flex-shrink-0 text-green-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  {point}
-                </li>
-              ))}
-            </ul>
-          </section>
-
-          {/* Examples */}
-          <section className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-            <h2 className="text-lg font-semibold text-gray-900">Examples</h2>
-            <div className="mt-4 space-y-3">
-              {content.examples.map((example: string, i: number) => (
-                <div key={i} className="rounded-md bg-amber-50 border border-amber-200 p-4">
-                  <p className="text-xs font-medium text-amber-800 mb-1">Example {i + 1}</p>
-                  <p className="text-sm text-amber-900">{example}</p>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          {/* Common Misconceptions */}
-          <section className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-            <h2 className="text-lg font-semibold text-gray-900">Common Misconceptions</h2>
-            <div className="mt-4 space-y-3">
-              {content.common_misconceptions.map((misc: string, i: number) => (
-                <div key={i} className="rounded-md bg-red-50 border border-red-200 p-4">
-                  <p className="text-xs font-medium text-red-800 mb-1">Misconception {i + 1}</p>
-                  <p className="text-sm text-red-700">{misc}</p>
-                </div>
-              ))}
-            </div>
-          </section>
-        </div>
-      ) : (
+      {/* Lesson list — vertical cards like topic/subtopic menu */}
+      {lessons.length === 0 ? (
         <div className="rounded-lg border-2 border-dashed border-gray-300 p-12 text-center">
           <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
           </svg>
           <h2 className="mt-4 text-lg font-semibold text-gray-700">No lesson content yet</h2>
-          <p className="mt-2 text-sm text-gray-500">
-            Lesson content has not been generated for this subtopic yet.
-          </p>
+          <p className="mt-2 text-sm text-gray-500">Lesson content has not been generated for this subtopic yet.</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {/* Lesson cards */}
+          <div className="space-y-2">
+            {lessons.map((lesson, i) => {
+              const isSelected = i === selectedLessonIdx
+              const isReleased = releasedLessonIds.has(lesson.id) || subtopicReleased
+              return (
+                <Link
+                  key={lesson.id}
+                  href={`/teacher/topics/${topic.id}/${subtopic.id}?lesson=${i}`}
+                  className={`flex items-center gap-4 rounded-lg border p-4 transition-all ${
+                    isSelected
+                      ? 'border-indigo-300 bg-indigo-50 shadow-sm'
+                      : 'border-gray-200 bg-white hover:border-blue-300 hover:shadow-sm'
+                  }`}
+                >
+                  <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-sm font-bold ${
+                    isSelected ? 'bg-indigo-100 text-indigo-600' : 'bg-blue-50 text-blue-600'
+                  }`}>
+                    {lesson.order_number}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h2 className={`text-base font-medium truncate ${isSelected ? 'text-indigo-900' : 'text-gray-900'}`}>
+                      {lesson.title}
+                    </h2>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      Click to view lesson content
+                    </p>
+                  </div>
+                  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                  <div onClick={(e: any) => e.stopPropagation()} className="flex-shrink-0">
+                    <LessonReleaseToggle
+                      lessonId={lesson.id}
+                      lessonTitle={lesson.title}
+                      initiallyReleased={isReleased}
+                    />
+                  </div>
+                </Link>
+              )
+            })}
+          </div>
+
+          {/* Selected lesson content */}
+          {selectedLesson && selectedLesson.content_json?.learning_objectives && (
+            <div className="space-y-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-gray-900">
+                  {selectedLesson.title}
+                </h2>
+                <span className="text-xs text-gray-500">Lesson {selectedLesson.order_number}</span>
+              </div>
+
+              {/* Learning Objectives */}
+              <section>
+                <h3 className="text-base font-semibold text-gray-900 mb-3">Learning Objectives</h3>
+                <ul className="space-y-2">
+                  {selectedLesson.content_json.learning_objectives.map((obj: string, i: number) => (
+                    <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700 mt-0.5">{i + 1}</span>
+                      {obj}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+
+              {/* Explanation */}
+              <section>
+                <h3 className="text-base font-semibold text-gray-900 mb-3">Explanation</h3>
+                <div className="prose prose-sm max-w-none text-gray-700">
+                  {selectedLesson.content_json.explanation
+                    ? renderExplanation(selectedLesson.content_json.explanation)
+                    : <p className="text-gray-500 italic">No explanation available.</p>}
+                </div>
+              </section>
+
+              {/* Key Points */}
+              <section>
+                <h3 className="text-base font-semibold text-gray-900 mb-3">Key Points</h3>
+                <ul className="space-y-2">
+                  {selectedLesson.content_json.key_points.map((point: string, i: number) => (
+                    <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                      <svg className="h-5 w-5 flex-shrink-0 text-green-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      {point}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+
+              {/* Examples */}
+              {selectedLesson.content_json.examples?.length > 0 && (
+                <section>
+                  <h3 className="text-base font-semibold text-gray-900 mb-3">Examples</h3>
+                  <div className="space-y-3">
+                    {selectedLesson.content_json.examples.map((example: string, i: number) => (
+                      <div key={i} className="rounded-md bg-amber-50 border border-amber-200 p-4">
+                        <p className="text-xs font-medium text-amber-800 mb-1">Example {i + 1}</p>
+                        <p className="text-sm text-amber-900">{example}</p>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {/* Misconceptions */}
+              {selectedLesson.content_json.common_misconceptions?.length > 0 && (
+                <section>
+                  <h3 className="text-base font-semibold text-gray-900 mb-3">Common Misconceptions</h3>
+                  <div className="space-y-3">
+                    {selectedLesson.content_json.common_misconceptions.map((mc: string, i: number) => (
+                      <div key={i} className="rounded-md bg-red-50 border border-red-200 p-4">
+                        <p className="text-xs font-medium text-red-800 mb-1">Misconception {i + 1}</p>
+                        <p className="text-sm text-red-700">{mc}</p>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>

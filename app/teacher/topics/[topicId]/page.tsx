@@ -21,8 +21,27 @@ async function getTopic(topicId: string) {
     .eq('topic_id', topicId)
     .order('order_number', { ascending: true })
 
+  // Get lesson counts per subtopic
+  const subtopicIds = ((subtopics as any[]) || []).map((s: any) => s.id)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return { ...topic, subtopics: (subtopics as any[]) || [] }
+  const { data: lessonCounts } = await (supabase.from('lessons') as any)
+    .select('subtopic_id')
+    .in('subtopic_id', subtopicIds)
+
+  const countMap = new Map<string, number>()
+  if (lessonCounts) {
+    for (const l of lessonCounts as { subtopic_id: string }[]) {
+      countMap.set(l.subtopic_id, (countMap.get(l.subtopic_id) || 0) + 1)
+    }
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const enriched = ((subtopics as any[]) || []).map((s: any) => ({
+    ...s,
+    lessonCount: countMap.get(s.id) || 0,
+  }))
+
+  return { ...topic, subtopics: enriched }
 }
 
 export default async function TeacherTopicDetailPage({
@@ -67,18 +86,8 @@ export default async function TeacherTopicDetailPage({
                 {subtopic.title}
               </h2>
               <p className="text-xs text-gray-500 mt-0.5">
-                {subtopic.content_json && typeof subtopic.content_json === 'object'
-                  ? (() => {
-                      const cj = subtopic.content_json as Record<string, unknown>
-                      const lessons = cj.lessons
-                      if (Array.isArray(lessons) && lessons.length > 0) {
-                        return `${lessons.length} lesson${lessons.length !== 1 ? 's' : ''}`
-                      }
-                      if (Array.isArray(cj.learning_objectives)) {
-                        return `Lesson content available`
-                      }
-                      return 'No lesson content yet'
-                    })()
+                {subtopic.lessonCount > 0
+                  ? `${subtopic.lessonCount} lesson${subtopic.lessonCount !== 1 ? 's' : ''}`
                   : 'No lesson content yet'}
               </p>
             </div>
