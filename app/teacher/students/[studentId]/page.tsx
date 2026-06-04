@@ -1,101 +1,146 @@
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { createClient } from '@/lib/supabase/client'
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function getStudentResults(studentId: string): Promise<any> {
-  const supabase = await createClient()
-
-  // Get student profile
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: profileList } = await (supabase.from('profiles') as any)
-    .select('id, full_name, username, email')
-    .eq('id', studentId)
-    .limit(1)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const profile = (profileList as any[] | null)?.[0]
-  if (!profile) return null
-
-  // Get all answers for this student
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: answers } = await (supabase.from('student_answers') as any)
-    .select('*')
-    .eq('student_id', studentId)
-    .order('submitted_at', { ascending: false })
-
-  // Get all question set IDs
-  const answerList = (answers || []) as Array<{ question_set_id: string; total_score: number; submitted_at: string; id: string }>
-  const qsIds = Array.from(new Set(answerList.map((a) => a.question_set_id)))
-
-  // Fetch question sets with subtopics
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: qSets } = await (supabase.from('question_sets') as any)
-    .select('id, subtopic_id, questions_json, created_at, status')
-    .in('id', qsIds)
-
-  // Fetch subtopics
-  const subIds = Array.from(new Set((qSets || []).map((qs: { subtopic_id: string }) => qs.subtopic_id)))
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: subtopics } = await (supabase.from('subtopics') as any)
-    .select('id, title, topic_id')
-    .in('id', subIds)
-
-  // Fetch topics
-  const topIds = Array.from(new Set((subtopics || []).map((s: { topic_id: string }) => s.topic_id)))
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: topics } = await (supabase.from('topics') as any)
-    .select('id, title')
-    .in('id', topIds)
-
-  // Build lookup maps
-  const topicMap = new Map((topics || []).map((t: { id: string; title: string }) => [t.id, t.title]))
-  const subtopicMap = new Map((subtopics || []).map((s: { id: string; title: string; topic_id: string }) => [s.id, s]))
-  const qsMap = new Map((qSets || []).map((qs: { id: string; subtopic_id: string; questions_json: Array<{ marks: number }>; status: string }) => [qs.id, qs]))
-
-  // Build results
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const results: any[] = []
-  for (const answer of answerList) {
-    const qs = qsMap.get(answer.question_set_id) as { questions_json?: Array<{ marks: number }>; subtopic_id?: string; status?: string } | undefined
-    if (!qs) continue
-    const questions = (qs.questions_json || []) as Array<{ marks: number }>
-    const maxScore = questions.reduce((sum: number, q: { marks?: number }) => sum + (q.marks || 0), 0)
-    const sub = subtopicMap.get(qs.subtopic_id) as { title: string; topic_id: string } | undefined
-    results.push({
-      answerId: answer.id,
-      questionSetId: answer.question_set_id,
-      subtopicTitle: sub?.title || 'Unknown',
-      topicTitle: sub ? topicMap.get(sub.topic_id) || '' : '',
-      totalScore: answer.total_score,
-      maxScore,
-      submittedAt: answer.submitted_at,
-      status: qs.status,
-    })
-  }
-
-  return { profile, results }
+interface Result {
+  answerId: string
+  subtopicTitle: string
+  topicTitle: string
+  totalScore: number
+  maxScore: number
+  submittedAt: string
 }
 
-export default async function StudentResultsPage({
+export default function StudentResultsPage({
   params,
 }: {
   params: { studentId: string }
 }) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/auth/login')
+  const router = useRouter()
+  const [profile, setProfile] = useState<{ full_name: string; username: string } | null>(null)
+  const [results, setResults] = useState<Result[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
-  // Check teacher role
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: profileList } = await (supabase.from('profiles') as any)
-    .select('role').eq('id', user.id).limit(1)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  if (!((profileList as any[] | null)?.[0]?.role === 'teacher')) redirect('/student')
+  useEffect(() => {
+    loadData()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.studentId])
 
-  const data = await getStudentResults(params.studentId)
-  if (!data) return <div className="p-6 text-gray-500">Student not found.</div>
+  async function loadData() {
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { router.push('/auth/login'); return }
 
-  const { profile, results } = data
+    // Check teacher role + get student profile in parallel
+    const [profileRes, roleRes] = await Promise.all([
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (supabase.from('profiles') as any)
+        .select('id, full_name, username, email')
+        .eq('id', params.studentId)
+        .limit(1),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (supabase.from('profiles') as any)
+        .select('role').eq('id', user.id).limit(1),
+    ])
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const student = (profileRes.data as any[] | null)?.[0]
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if (!student || !((roleRes.data as any[] | null)?.[0]?.role === 'teacher')) {
+      router.push('/student')
+      return
+    }
+
+    setProfile(student)
+
+    // Get all answers + question sets (can parallelize since we need both eventually)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: answers } = await (supabase.from('student_answers') as any)
+      .select('*')
+      .eq('student_id', params.studentId)
+      .order('submitted_at', { ascending: false })
+
+    const answerList = (answers || []) as Array<{ id: string; question_set_id: string; total_score: number; submitted_at: string }>
+    if (answerList.length === 0) {
+      setResults([])
+      setLoading(false)
+      return
+    }
+
+    const qsIds = Array.from(new Set(answerList.map((a) => a.question_set_id)))
+
+    // Fetch question sets
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: qSets } = await (supabase.from('question_sets') as any)
+      .select('id, subtopic_id, questions_json')
+      .in('id', qsIds)
+
+    if (!qSets) { setLoading(false); return }
+
+    // Fetch subtopics
+    const subIds = Array.from(new Set((qSets as Array<{ subtopic_id: string }>).map((qs) => qs.subtopic_id)))
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: subtopics } = await (supabase.from('subtopics') as any)
+      .select('id, title, topic_id')
+      .in('id', subIds)
+
+    // Fetch topics
+    const topIds = Array.from(new Set((subtopics || []).map((s: { topic_id: string }) => s.topic_id)))
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: topics } = await (supabase.from('topics') as any)
+      .select('id, title')
+      .in('id', topIds)
+
+    // Build maps
+    const topicMap = new Map((topics || []).map((t: { id: string; title: string }) => [t.id, t.title]))
+    const subtopicMap = new Map((subtopics || []).map((s: { id: string; title: string; topic_id: string }) => [s.id, s]))
+
+    // Build results
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const qsMap = new Map((qSets as any[]).map((qs: any) => [qs.id, qs]))
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const built: Result[] = []
+    for (const answer of answerList) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const qs = qsMap.get(answer.question_set_id) as any
+      if (!qs) continue
+      const questions = (qs.questions_json || []) as Array<{ marks: number }>
+      const maxScore = questions.reduce((sum: number, q: { marks?: number }) => sum + (q.marks || 0), 0)
+      const sub = subtopicMap.get(qs.subtopic_id)
+      built.push({
+        answerId: answer.id,
+        subtopicTitle: sub?.title || 'Unknown',
+        topicTitle: sub ? topicMap.get(sub.topic_id) || '' : '',
+        totalScore: answer.total_score,
+        maxScore,
+        submittedAt: answer.submitted_at,
+      })
+    }
+
+    setResults(built)
+    setLoading(false)
+  }
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="animate-pulse">
+          <div className="h-4 w-32 bg-gray-200 rounded mb-4" />
+          <div className="h-8 w-48 bg-gray-200 rounded mb-2" />
+          <div className="h-4 w-36 bg-gray-200 rounded" />
+        </div>
+        <div className="space-y-3">
+          {[1,2,3].map((i) => (
+            <div key={i} className="h-20 bg-gray-100 rounded-lg animate-pulse" />
+          ))}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -103,25 +148,22 @@ export default async function StudentResultsPage({
         <Link href="/teacher/students" className="text-sm font-medium text-blue-600 hover:text-blue-800">
           &larr; Back to Students
         </Link>
-        <h1 className="mt-2 text-2xl font-bold text-gray-900">{profile.full_name}</h1>
+        <h1 className="mt-2 text-2xl font-bold text-gray-900">{profile?.full_name || 'Student'}</h1>
         <p className="mt-1 text-sm text-gray-500">
-          @{profile.username || '-'} &middot; {results.length} completed question set{results.length !== 1 ? 's' : ''}
+          @{profile?.username || '-'} &middot; {results.length} completed question set{results.length !== 1 ? 's' : ''}
         </p>
       </div>
 
       {results.length === 0 ? (
         <div className="rounded-lg border-2 border-dashed border-gray-300 p-12 text-center">
-          <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-          <h2 className="mt-4 text-lg font-semibold text-gray-700">No results yet</h2>
+          <h2 className="text-lg font-semibold text-gray-700">No results yet</h2>
           <p className="mt-2 text-sm text-gray-500">
             This student hasn&apos;t completed any question sets assigned by you.
           </p>
         </div>
       ) : (
         <div className="space-y-3">
-          {results.map((r: { answerId: string; subtopicTitle: string; topicTitle: string; totalScore: number; maxScore: number; submittedAt: string; status: string }) => {
+          {results.map((r) => {
             const ratio = r.maxScore > 0 ? r.totalScore / r.maxScore : 0
             const scoreColor = ratio >= 0.7 ? 'text-green-700' : ratio >= 0.4 ? 'text-amber-700' : 'text-red-700'
             const scoreBg = ratio >= 0.7 ? 'bg-green-100' : ratio >= 0.4 ? 'bg-amber-100' : 'bg-red-100'
