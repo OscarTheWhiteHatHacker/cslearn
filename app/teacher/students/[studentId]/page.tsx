@@ -104,7 +104,8 @@ export default function StudentResultsPage({
       built.push({
         answerId: answer.id,
         subtopicTitle: sub?.title || 'Unknown',
-        topicTitle: sub ? topicMap.get(sub.topic_id) || '' : '',
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        topicTitle: sub ? (topicMap.get(sub.topic_id) as any) || '' : '',
         totalScore: answer.total_score,
         maxScore,
         submittedAt: answer.submitted_at,
