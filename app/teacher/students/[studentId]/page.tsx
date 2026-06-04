@@ -50,7 +50,7 @@ async function getStudentResults(studentId: string): Promise<any> {
   // Build lookup maps
   const topicMap = new Map((topics || []).map((t: { id: string; title: string }) => [t.id, t.title]))
   const subtopicMap = new Map((subtopics || []).map((s: { id: string; title: string; topic_id: string }) => [s.id, s]))
-  const qsMap = new Map((qSets || []).map((qs: { id: string }) => [qs.id, qs]))
+  const qsMap = new Map((qSets || []).map((qs: { id: string; subtopic_id: string; questions_json: Array<{ marks: number }>; status: string }) => [qs.id, qs]))
 
   // Build results
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
