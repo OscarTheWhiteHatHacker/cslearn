@@ -107,6 +107,7 @@ export default function TopicClient({ topicData }: any) {
                                 {lesson.title}
                               </p>
                             </div>
+                            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                             <div onClick={(e: any) => e.stopPropagation()} className="flex-shrink-0">
                               <LessonReleaseToggle
                                 lessonId={lesson.id}
