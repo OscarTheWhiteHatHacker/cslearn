@@ -23,7 +23,6 @@ export default function StudentResultsPage({
   const [profile, setProfile] = useState<{ full_name: string; username: string } | null>(null)
   const [results, setResults] = useState<Result[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
 
   useEffect(() => {
     loadData()
