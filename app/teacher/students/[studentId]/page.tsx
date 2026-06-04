@@ -20,6 +20,8 @@ export default function StudentResultsPage({
   params: { studentId: string }
 }) {
   const router = useRouter()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const supabase: any = createClient()
   const [profile, setProfile] = useState<{ full_name: string; username: string } | null>(null)
   const [results, setResults] = useState<Result[]>([])
   const [loading, setLoading] = useState(true)
@@ -30,35 +32,26 @@ export default function StudentResultsPage({
   }, [params.studentId])
 
   async function loadData() {
-    const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { router.push('/auth/login'); return }
 
     // Check teacher role + get student profile in parallel
     const [profileRes, roleRes] = await Promise.all([
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (supabase.from('profiles') as any)
-        .select('id, full_name, username, email')
-        .eq('id', params.studentId)
-        .limit(1),
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (supabase.from('profiles') as any)
-        .select('role').eq('id', user.id).limit(1),
+      supabase.from('profiles').select('id, full_name, username, email').eq('id', params.studentId).limit(1),
+      supabase.from('profiles').select('role').eq('id', user.id).limit(1),
     ])
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const student = (profileRes.data as any[] | null)?.[0]
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if (!student || !((roleRes.data as any[] | null)?.[0]?.role === 'teacher')) {
+    const student = profileRes.data?.[0]
+    if (!student || !(roleRes.data?.[0]?.role === 'teacher')) {
       router.push('/student')
       return
     }
 
     setProfile(student)
 
-    // Get all answers + question sets (can parallelize since we need both eventually)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: answers } = await (supabase.from('student_answers') as any)
+    // Get all answers
+    const { data: answers } = await supabase
+      .from('student_answers')
       .select('*')
       .eq('student_id', params.studentId)
       .order('submitted_at', { ascending: false })
@@ -73,43 +66,41 @@ export default function StudentResultsPage({
     const qsIds = Array.from(new Set(answerList.map((a) => a.question_set_id)))
 
     // Fetch question sets
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: qSets } = await (supabase.from('question_sets') as any)
+    const { data: qSets } = await supabase
+      .from('question_sets')
       .select('id, subtopic_id, questions_json')
       .in('id', qsIds)
 
     if (!qSets) { setLoading(false); return }
 
     // Fetch subtopics
-    const subIds = Array.from(new Set((qSets as Array<{ subtopic_id: string }>).map((qs) => qs.subtopic_id)))
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: subtopics } = await (supabase.from('subtopics') as any)
+    const subIds = Array.from(new Set((qSets as Array<{ subtopic_id: string }>).map((qs: { subtopic_id: string }) => qs.subtopic_id)))
+    const { data: subtopics } = await supabase
+      .from('subtopics')
       .select('id, title, topic_id')
       .in('id', subIds)
 
     // Fetch topics
     const topIds = Array.from(new Set((subtopics || []).map((s: { topic_id: string }) => s.topic_id)))
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: topics } = await (supabase.from('topics') as any)
+    const { data: topics } = await supabase
+      .from('topics')
       .select('id, title')
       .in('id', topIds)
 
-    // Build maps
+    // Build lookup maps
     const topicMap = new Map((topics || []).map((t: { id: string; title: string }) => [t.id, t.title]))
     const subtopicMap = new Map((subtopics || []).map((s: { id: string; title: string; topic_id: string }) => [s.id, s]))
+    const qsMap = new Map((qSets as Array<{ id: string; subtopic_id: string; questions_json: Array<{ marks: number }> }>).map((qs) => [qs.id, qs]))
 
     // Build results
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const qsMap = new Map((qSets as any[]).map((qs: any) => [qs.id, qs]))
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const built: Result[] = []
     for (const answer of answerList) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const qs = qsMap.get(answer.question_set_id) as any
+      const qs = qsMap.get(answer.question_set_id)
       if (!qs) continue
       const questions = (qs.questions_json || []) as Array<{ marks: number }>
       const maxScore = questions.reduce((sum: number, q: { marks?: number }) => sum + (q.marks || 0), 0)
-      const sub = subtopicMap.get(qs.subtopic_id)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const sub = subtopicMap.get(qs.subtopic_id) as any
       built.push({
         answerId: answer.id,
         subtopicTitle: sub?.title || 'Unknown',
