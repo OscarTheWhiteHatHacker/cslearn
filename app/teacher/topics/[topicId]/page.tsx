@@ -22,6 +22,7 @@ async function getTopic(topicId: string) {
     .order('order_number', { ascending: true })
 
   // Get lesson counts per subtopic
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const subtopicIds = ((subtopics as any[]) || []).map((s: any) => s.id)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: lessonCounts } = await (supabase.from('lessons') as any)
