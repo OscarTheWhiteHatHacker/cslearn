@@ -41,7 +41,7 @@ async function getStudentResults(studentId: string): Promise<any> {
     .in('id', subIds)
 
   // Fetch topics
-  const topIds = [...new Set((subtopics || []).map((s: { topic_id: string }) => s.topic_id))]
+  const topIds = Array.from(new Set((subtopics || []).map((s: { topic_id: string }) => s.topic_id)))
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: topics } = await (supabase.from('topics') as any)
     .select('id, title')
