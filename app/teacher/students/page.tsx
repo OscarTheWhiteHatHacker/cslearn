@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
 interface Student {
@@ -327,7 +328,11 @@ export default function ManageStudentsPage() {
         ) : (
           <div className="divide-y divide-gray-200">
             {students.map((student) => (
-              <div key={student.id} className="px-6 py-4">
+              <Link
+                key={student.id}
+                href={`/teacher/students/${student.id}`}
+                className="block px-6 py-4 transition-all hover:bg-gray-50"
+              >
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-100 text-sm font-bold text-indigo-600">
@@ -415,7 +420,7 @@ export default function ManageStudentsPage() {
                     </p>
                   )}
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         )}
