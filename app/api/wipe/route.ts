@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 
-const TABLES = ['student_answers', 'question_sets', 'released_subtopics', 'profiles', 'organizations']
+const TABLES = ['student_answers', 'question_sets', 'released_lessons', 'released_subtopics', 'lessons', 'profiles', 'organizations']
 
 export async function POST(request: Request) {
   try {
