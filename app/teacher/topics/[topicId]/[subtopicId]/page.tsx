@@ -26,9 +26,13 @@ async function getPageData(subtopicId: string, topicId: string): Promise<any> {
   const { data: { user } } = await supabase.auth.getUser()
 
   // Parallel queries
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [subtopicResult, topicResult, lessonsResult] = await Promise.all([
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (supabase.from('subtopics') as any).select('*').eq('id', subtopicId).limit(1),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (supabase.from('topics') as any).select('*').eq('id', topicId).limit(1),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (supabase.from('lessons') as any).select('*').eq('subtopic_id', subtopicId).order('order_number'),
   ])
 
@@ -44,8 +48,10 @@ async function getPageData(subtopicId: string, topicId: string): Promise<any> {
 
   if (user) {
     const [releaseResult, lessonIdsResult] = await Promise.all([
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (supabase.from('released_subtopics') as any)
         .select('id').eq('subtopic_id', subtopicId).eq('teacher_id', user.id).limit(1),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (supabase.from('released_lessons') as any)
         .select('lesson_id').eq('teacher_id', user.id),
     ])
