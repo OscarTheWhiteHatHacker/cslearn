@@ -145,7 +145,7 @@ export default async function TeacherSubtopicPage({
         <div className="space-y-4">
           {/* Lesson cards */}
           <div className="space-y-2">
-            {lessons.map((lesson, i) => {
+            {lessons.map((lesson: Lesson, i) => {
               const isSelected = i === selectedLessonIdx
               const isReleased = releasedLessonIds.has(lesson.id) || subtopicReleased
               return (
