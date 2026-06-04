@@ -13,6 +13,8 @@ export async function GET(request: Request) {
   const id = searchParams.get('id')
   const subtopicId = searchParams.get('subtopicId')
   const status = searchParams.get('status')
+  const limit = Math.min(Math.max(parseInt(searchParams.get('limit') || '50', 10) || 50, 1), 200)
+  const offset = Math.max(parseInt(searchParams.get('offset') || '0', 10) || 0, 0)
 
   if (id) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -50,6 +52,7 @@ export async function GET(request: Request) {
       .eq('subtopic_id', subtopicId)
       .eq('teacher_id', user.id)
       .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1)
 
     if (status) {
       query = query.eq('status', status)

@@ -124,3 +124,14 @@ DROP POLICY IF EXISTS "Teachers manage released lessons" ON released_lessons;
 CREATE POLICY "Teachers manage released lessons" ON released_lessons FOR ALL USING (auth.jwt() -> 'user_metadata' ->> 'role' = 'teacher');
 DROP POLICY IF EXISTS "Students view released lessons" ON released_lessons;
 CREATE POLICY "Students view released lessons" ON released_lessons FOR SELECT USING (auth.jwt() -> 'user_metadata' ->> 'role' = 'student');
+
+-- Performance indexes for frequently filtered columns
+CREATE INDEX IF NOT EXISTS idx_lessons_subtopic_id ON public.lessons(subtopic_id);
+CREATE INDEX IF NOT EXISTS idx_subtopics_topic_id ON public.subtopics(topic_id);
+CREATE INDEX IF NOT EXISTS idx_question_sets_subtopic_id ON public.question_sets(subtopic_id);
+CREATE INDEX IF NOT EXISTS idx_question_sets_teacher_id ON public.question_sets(teacher_id);
+CREATE INDEX IF NOT EXISTS idx_question_sets_status ON public.question_sets(status);
+CREATE INDEX IF NOT EXISTS idx_released_lessons_teacher_id ON public.released_lessons(teacher_id);
+CREATE INDEX IF NOT EXISTS idx_profiles_organization_id ON public.profiles(organization_id);
+CREATE INDEX IF NOT EXISTS idx_student_answers_question_set_id ON public.student_answers(question_set_id);
+CREATE INDEX IF NOT EXISTS idx_student_answers_student_id ON public.student_answers(student_id);
