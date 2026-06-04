@@ -88,19 +88,24 @@ export async function POST(request: Request) {
       }
     }
 
-    // 4. Update profile with username and organization_id
+    // 4. Upsert profile with username and organization_id
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const updateData: any = { username }
+    const upsertData: any = { id: userId, username }
+    if (fullName) {
+      upsertData.full_name = fullName
+    }
+    if (role) {
+      upsertData.role = role
+    }
     if (organizationId) {
-      updateData.organization_id = organizationId
+      upsertData.organization_id = organizationId
     }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error: updateError } = await (supabase.from('profiles') as any)
-      .update(updateData)
-      .eq('id', userId)
+    const { error: upsertError } = await (supabase.from('profiles') as any)
+      .upsert(upsertData, { onConflict: 'id' })
 
-    if (updateError) {
-      console.error('Profile update error:', updateError)
+    if (upsertError) {
+      console.error('Profile upsert error:', upsertError)
       // Don't fail - the user is created, profile might work later
     }
 

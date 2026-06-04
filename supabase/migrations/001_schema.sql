@@ -21,6 +21,27 @@ ALTER TABLE profiles ADD COLUMN IF NOT EXISTS feedback_updated_at TIMESTAMPTZ DE
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE organizations ENABLE ROW LEVEL SECURITY;
 
+-- Auto-create profiles on user signup
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS trigger AS $$
+BEGIN
+  INSERT INTO public.profiles (id, email, full_name, role, username)
+  VALUES (
+    NEW.id,
+    NEW.email,
+    NEW.raw_user_meta_data ->> 'full_name',
+    NEW.raw_user_meta_data ->> 'role',
+    NEW.raw_user_meta_data ->> 'username'
+  )
+  ON CONFLICT (id) DO NOTHING;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
 DROP POLICY IF EXISTS "Users can read own profile" ON profiles; CREATE POLICY "Users can read own profile" ON profiles FOR SELECT USING (auth.uid() = id);
 DROP POLICY IF EXISTS "Teachers read all profiles" ON profiles; CREATE POLICY "Teachers read all profiles" ON profiles FOR SELECT USING (auth.jwt() -> 'user_metadata' ->> 'role' = 'teacher');
 DROP POLICY IF EXISTS "Users can update own profile" ON profiles; CREATE POLICY "Users can update own profile" ON profiles FOR UPDATE USING (auth.uid() = id);

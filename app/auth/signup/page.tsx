@@ -131,11 +131,11 @@ export default function SignupPage() {
         if (user) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           await (supabase.from('profiles') as any)
-            .update({
+            .upsert({
+              id: user.id,
               username: username.trim().toLowerCase(),
               organization_id: result.organizationId || undefined,
-            })
-            .eq('id', user.id)
+            }, { onConflict: 'id' })
         }
         router.push(isStudent ? '/student' : '/teacher')
         router.refresh()

@@ -36,20 +36,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: `Failed to confirm user: ${confirmError.message}` }, { status: 500 })
     }
 
-    // 2. Update profile with username and organization_id
+    // 2. Upsert profile with username and organization_id
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const updateData: any = { username }
+    const upsertData: any = { id: userId, username }
     if (organizationId) {
-      updateData.organization_id = organizationId
+      upsertData.organization_id = organizationId
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error: updateError } = await (supabase.from('profiles') as any)
-      .update(updateData)
-      .eq('id', userId)
+    const { error: upsertError } = await (supabase.from('profiles') as any)
+      .upsert(upsertData, { onConflict: 'id' })
 
-    if (updateError) {
-      return NextResponse.json({ error: `Profile update failed: ${updateError.message}` }, { status: 500 })
+    if (upsertError) {
+      return NextResponse.json({ error: `Profile upsert failed: ${upsertError.message}` }, { status: 500 })
     }
 
     return NextResponse.json({ success: true })

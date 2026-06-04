@@ -57,11 +57,10 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Failed to create user' }, { status: 500 })
       }
 
-      // Update profile with username and org
+      // Upsert profile with username and org
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await (supabase.from('profiles') as any)
-        .update({ username: username.trim(), organization_id: orgId })
-        .eq('id', userId)
+        .upsert({ id: userId, username: username.trim(), organization_id: orgId, role: 'student', full_name: fullName.trim() }, { onConflict: 'id' })
 
       return NextResponse.json({ success: true, userId, email: placeholderEmail })
     }
