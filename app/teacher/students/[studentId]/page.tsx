@@ -56,7 +56,7 @@ async function getStudentResults(studentId: string): Promise<any> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const results: any[] = []
   for (const answer of answerList) {
-    const qs = qsMap.get(answer.question_set_id)
+    const qs = qsMap.get(answer.question_set_id) as { questions_json?: Array<{ marks: number }>; subtopic_id?: string; status?: string } | undefined
     if (!qs) continue
     const questions = (qs.questions_json || []) as Array<{ marks: number }>
     const maxScore = questions.reduce((sum: number, q: { marks?: number }) => sum + (q.marks || 0), 0)
