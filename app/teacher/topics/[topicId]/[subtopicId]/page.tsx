@@ -22,7 +22,8 @@ interface Lesson {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function getPageData(subtopicId: string, topicId: string): Promise<any> {
-  const supabase = await createClient()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const supabase: any = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   // Parallel queries
