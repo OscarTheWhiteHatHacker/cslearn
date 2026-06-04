@@ -22,6 +22,7 @@ async function getTopic(topicId: string) {
     .eq('topic_id', topicId)
     .order('order_number', { ascending: true })
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const subtopicIds = ((subtopics as any[]) || []).map((s: any) => s.id)
 
   // Get lessons for all subtopics
@@ -34,6 +35,7 @@ async function getTopic(topicId: string) {
   // Group lessons by subtopic
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const lessonsBySubtopic: Record<string, any[]> = {}
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   for (const l of (allLessons || []) as any[]) {
     if (!lessonsBySubtopic[l.subtopic_id]) lessonsBySubtopic[l.subtopic_id] = []
     lessonsBySubtopic[l.subtopic_id].push(l)
@@ -47,6 +49,7 @@ async function getTopic(topicId: string) {
     const { data: released } = await (supabase.from('released_lessons') as any)
       .select('lesson_id')
       .eq('teacher_id', user.id)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     lessonReleaseIds = ((released as any[]) || []).map((r: any) => r.lesson_id)
   }
 
