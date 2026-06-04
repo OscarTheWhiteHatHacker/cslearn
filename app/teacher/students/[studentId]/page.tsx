@@ -60,7 +60,7 @@ async function getStudentResults(studentId: string): Promise<any> {
     if (!qs) continue
     const questions = (qs.questions_json || []) as Array<{ marks: number }>
     const maxScore = questions.reduce((sum: number, q: { marks?: number }) => sum + (q.marks || 0), 0)
-    const sub = subtopicMap.get(qs.subtopic_id)
+    const sub = subtopicMap.get(qs.subtopic_id) as { title: string; topic_id: string } | undefined
     results.push({
       answerId: answer.id,
       questionSetId: answer.question_set_id,
