@@ -25,7 +25,7 @@ async function getStudentResults(studentId: string): Promise<any> {
 
   // Get all question set IDs
   const answerList = (answers || []) as Array<{ question_set_id: string; total_score: number; submitted_at: string; id: string }>
-  const qsIds = [...new Set(answerList.map((a) => a.question_set_id))]
+  const qsIds = Array.from(new Set(answerList.map((a) => a.question_set_id)))
 
   // Fetch question sets with subtopics
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -34,7 +34,7 @@ async function getStudentResults(studentId: string): Promise<any> {
     .in('id', qsIds)
 
   // Fetch subtopics
-  const subIds = [...new Set((qSets || []).map((qs: { subtopic_id: string }) => qs.subtopic_id))]
+  const subIds = Array.from(new Set((qSets || []).map((qs: { subtopic_id: string }) => qs.subtopic_id)))
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: subtopics } = await (supabase.from('subtopics') as any)
     .select('id, title, topic_id')
