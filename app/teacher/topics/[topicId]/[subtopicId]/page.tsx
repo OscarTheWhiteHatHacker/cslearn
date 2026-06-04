@@ -24,8 +24,11 @@ async function getPageData(subtopicId: string, topicId: string): Promise<any> {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [subtopicResult, topicResult, lessonsResult] = await Promise.all([
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (supabase.from('subtopics') as any).select('*').eq('id', subtopicId).limit(1),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (supabase.from('topics') as any).select('*').eq('id', topicId).limit(1),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (supabase.from('lessons') as any).select('*').eq('subtopic_id', subtopicId).order('order_number'),
   ])
 
@@ -36,18 +39,20 @@ async function getPageData(subtopicId: string, topicId: string): Promise<any> {
   const lessons: Lesson[] = (lessonsResult.data as Lesson[]) || []
 
   let subtopicReleased = false
-  let releasedLessonIds = new Set<string>()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let releasedLessonIds: any = []
 
   if (user) {
     const [releaseResult, lessonIdsResult] = await Promise.all([
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (supabase.from('released_subtopics') as any).select('id').eq('subtopic_id', subtopicId).eq('teacher_id', user.id).limit(1),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (supabase.from('released_lessons') as any).select('lesson_id').eq('teacher_id', user.id),
     ])
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     subtopicReleased = ((releaseResult.data as any[] | null)?.length || 0) > 0
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const releasedIds = (lessonIdsResult.data as any[] || []).map((r: any) => r.lesson_id)
-    releasedLessonIds = releasedIds
+    releasedLessonIds = (lessonIdsResult.data as any[] || []).map((r: any) => r.lesson_id)
   }
 
   return { subtopic, topic, lessons, subtopicReleased, releasedLessonIds, subtopicId }
