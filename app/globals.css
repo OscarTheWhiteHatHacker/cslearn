@@ -15,8 +15,6 @@
   --accent-light: #eab308;
   --accent-bg: #fef9c3;
   --accent-hover: #a16207;
-  --logo-dark: #000000;
-  --logo-gold: #ca8a04;
 }
 
 .dark {
@@ -32,8 +30,6 @@
   --accent-light: #c084fc;
   --accent-bg: #2a1a3a;
   --accent-hover: #9333ea;
-  --logo-dark: #a855f7;
-  --logo-gold: #c084fc;
 }
 
 .dark body {

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
 import ThemeToggle from '@/components/ThemeToggle'
+import Logo from '@/components/Logo'
 import Link from 'next/link'
 
 export default function LoginPage() {
@@ -95,7 +96,7 @@ export default function LoginPage() {
 
       <div className="relative w-full max-w-md space-y-8">
         <div className="text-center">
-          <img src="/logo.svg" alt="CSLearn" className="mx-auto h-36 w-auto mb-4" />
+          <Logo className="mx-auto h-36 w-auto mb-4" />
           <h1 className="text-gray-600 text-lg font-medium">Sign in with your username</h1>
         </div>
 
