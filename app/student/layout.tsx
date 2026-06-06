@@ -38,7 +38,7 @@ export default async function StudentLayout({
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-8">
             <Link href="/student" className="flex items-center gap-2">
-              <img src="/logo.svg" alt="CSLearn" className="h-9 w-auto" />
+              <img src="/logo.svg" alt="CSLearn" className="h-12 w-auto" />
             </Link>
             <nav className="hidden sm:flex items-center gap-1">
               <div className="px-3 py-2">

@@ -73,9 +73,8 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center px-4">
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
-          <img src="/logo.svg" alt="CSLearn" className="mx-auto h-16 w-auto mb-3" />
-          <h1 className="text-3xl font-bold text-gray-900">CSLearn</h1>
-          <p className="mt-2 text-gray-600">Sign in with your username</p>
+          <img src="/logo.svg" alt="CSLearn" className="mx-auto h-36 w-auto mb-4" />
+          <p className="text-gray-600">Sign in with your username</p>
         </div>
 
         <form onSubmit={handleLogin} className="mt-8 space-y-6">
