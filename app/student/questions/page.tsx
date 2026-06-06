@@ -1,8 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { formatDate } from '@/lib/formatters'
+import { SkeletonStudentQuestions } from '@/components/Skeleton'
+import { ErrorState } from '@/components/ErrorState'
+import { EmptyState } from '@/components/EmptyState'
 
 interface QuestionSetInfo {
   id: string
@@ -122,12 +126,30 @@ async function getStudentQuestionSets(): Promise<QuestionSetInfo[]> {
 export default function StudentQuestionsPage() {
   const [questionSets, setQuestionSets] = useState<QuestionSetInfo[]>([])
   const [loading, setLoading] = useState(true)
+  const [errorState, setErrorState] = useState<string | null>(null)
+  const abortRef = useRef<AbortController | null>(null)
 
-  async function load() {
-    const result = await getStudentQuestionSets()
-    setQuestionSets(result)
-    setLoading(false)
-  }
+  useEffect(() => {
+    document.title = 'Practice Questions | CSLearn'
+  }, [])
+
+  const load = useCallback(async () => {
+    if (abortRef.current) abortRef.current.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
+
+    try {
+      const result = await getStudentQuestionSets()
+      if (controller.signal.aborted) return
+      setQuestionSets(result)
+      setErrorState(null)
+      setLoading(false)
+    } catch (err) {
+      if (controller.signal.aborted) return
+      setErrorState(err instanceof Error ? err.message : 'Failed to load questions')
+      setLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -162,36 +184,38 @@ export default function StudentQuestionsPage() {
 
     return () => {
       cancelled = true
+      if (abortRef.current) abortRef.current.abort()
       if (interval) clearInterval(interval)
       if (channel) supabase.removeChannel(channel)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [load])
 
   if (loading) {
+    return <SkeletonStudentQuestions />
+  }
+
+  if (errorState) {
     return (
-      <div className="space-y-6">
-        <h1 className="text-2xl font-bold text-gray-900">Practice Questions</h1>
-        <div className="space-y-4">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-28 animate-pulse rounded-lg border bg-white p-6 shadow-sm" />
-          ))}
-        </div>
-      </div>
+      <ErrorState
+        title="Failed to load questions"
+        message={errorState}
+        onRetry={() => { setErrorState(null); setLoading(true); load() }}
+      />
     )
   }
 
   return (
-    <div className="space-y-6">
+    <section className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Practice Questions</h1>
-          <p className="mt-1 text-gray-600">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Practice Questions</h1>
+          <p className="mt-1 text-gray-600 dark:text-gray-400">
             Question sets assigned by your teacher. Complete them to get AI-marked feedback.
           </p>
         </div>
         {questionSets.length > 0 && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-3 py-1 text-xs font-medium text-green-700">
+          <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-3 py-1 text-xs font-medium text-green-700 dark:bg-green-900 dark:text-green-300">
             <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
             Live
           </span>
@@ -210,23 +234,23 @@ export default function StudentQuestionsPage() {
               <Link
                 key={set.id}
                 href={isCompleted ? `/student/questions/${set.id}?view=results` : `/student/questions/${set.id}`}
-                className={`block rounded-lg border bg-white p-6 shadow-sm transition-all hover:shadow-md ${
-                  isCompleted ? 'hover:border-green-300' : 'hover:border-blue-300'
+                className={`block rounded-lg border bg-white p-6 shadow-sm transition-all hover:shadow-md dark:bg-gray-800 dark:border-gray-700 ${
+                  isCompleted ? 'hover:border-green-300 dark:hover:border-green-600' : 'hover:border-blue-300 dark:hover:border-blue-600'
                 }`}
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
-                    <h2 className="text-lg font-semibold text-gray-900 truncate">
+                    <h2 className="text-lg font-semibold text-gray-900 truncate dark:text-gray-100">
                       {set.subtopic_title}
                     </h2>
-                    <p className="mt-1 text-sm text-gray-500">
+                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                       {set.topic_title}
                     </p>
                     <div className="mt-2 flex items-center gap-3">
-                      <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-700">
+                      <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-700 dark:bg-gray-700 dark:text-gray-300">
                         {questionCount} question{questionCount !== 1 ? 's' : ''}
                       </span>
-                      <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-700">
+                      <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-700 dark:bg-gray-700 dark:text-gray-300">
                         {set.max_score} mark{set.max_score !== 1 ? 's' : ''}
                       </span>
                     </div>
@@ -234,18 +258,18 @@ export default function StudentQuestionsPage() {
                   <div className="flex-shrink-0">
                     {isCompleted ? (
                       <div className="text-right">
-                        <span className="inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-800">
-                          Completed
-                        </span>
-                        <p className="mt-1 text-sm font-semibold text-gray-900">
-                          Score: {set.answer!.total_score}/{set.max_score}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {new Date(set.answer!.submitted_at).toLocaleDateString()}
-                        </p>
+                          <span className="inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-800 dark:bg-green-900 dark:text-green-300">
+                            Completed
+                          </span>
+                          <p className="mt-1 text-sm font-semibold text-gray-900 dark:text-gray-100">
+                            Score: {set.answer!.total_score}/{set.max_score}
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            {formatDate(set.answer!.submitted_at)}
+                          </p>
                       </div>
                     ) : (
-                      <span className="inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
+                      <span className="inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800 dark:bg-amber-900 dark:text-amber-300">
                         Not started
                       </span>
                     )}
@@ -256,16 +280,11 @@ export default function StudentQuestionsPage() {
           })}
         </div>
       ) : (
-        <div className="rounded-lg border-2 border-dashed border-gray-300 p-12 text-center">
-          <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-          <h2 className="mt-4 text-lg font-semibold text-gray-700">No question sets yet</h2>
-          <p className="mt-2 text-sm text-gray-500">
-            Your teacher hasn&apos;t assigned any question sets yet. Check back later!
-          </p>
-        </div>
+        <EmptyState
+          title="No question sets yet"
+          description="Your teacher hasn't assigned any question sets yet. Check back later!"
+        />
       )}
-    </div>
+    </section>
   )
 }

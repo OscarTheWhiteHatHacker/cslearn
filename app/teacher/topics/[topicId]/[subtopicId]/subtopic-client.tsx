@@ -53,6 +53,7 @@ export default function SubtopicClient(props: any) {
               const isReleased = releasedSet.has(lesson.id) || subtopicReleased
               return (
                 <button
+                  type="button"
                   key={lesson.id}
                   onClick={() => setSelectedIdx(i)}
                   className={`w-full text-left flex items-center gap-4 rounded-lg border p-4 transition-all ${
@@ -75,7 +76,6 @@ export default function SubtopicClient(props: any) {
                   <div onClick={(e: any) => e.stopPropagation()} className="flex-shrink-0">
                     <LessonReleaseToggle
                       lessonId={lesson.id}
-                      lessonTitle={lesson.title}
                       initiallyReleased={isReleased}
                     />
                   </div>

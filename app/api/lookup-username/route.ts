@@ -4,12 +4,7 @@ import { createServerClient } from '@supabase/ssr'
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { secret } = body
     const username = (body.username || '').toLowerCase().trim()
-
-    if (secret !== process.env.WIPE_SECRET) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
 
     if (!username) {
       return NextResponse.json({ error: 'Missing username' }, { status: 400 })

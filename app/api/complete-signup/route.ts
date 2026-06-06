@@ -1,15 +1,16 @@
 import { NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
+import { csrfProtection } from '@/lib/api-auth'
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json()
-    const { userId, organizationId, secret } = body
-    const username = (body.username || '').toLowerCase().trim()
+    // CSRF check
+    const csrfError = csrfProtection(request)
+    if (csrfError) return csrfError
 
-    if (secret !== process.env.WIPE_SECRET) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const body = await request.json()
+    const { userId, organizationId } = body
+    const username = (body.username || '').toLowerCase().trim()
 
     if (!userId || !username) {
       return NextResponse.json({ error: 'Missing userId or username' }, { status: 400 })

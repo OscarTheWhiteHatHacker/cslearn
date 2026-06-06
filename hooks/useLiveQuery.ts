@@ -15,6 +15,15 @@ type LiveQueryOptions = {
   pollInterval?: number
   /** Disable the subscription */
   enabled?: boolean
+  /** Abort signal to cancel in-flight fetches */
+  signal?: AbortSignal
+}
+
+type LiveQueryResult<T> = {
+  data: T | null
+  loading: boolean
+  error: unknown
+  refresh: () => Promise<void>
 }
 
 /**
@@ -28,13 +37,12 @@ type LiveQueryOptions = {
  * Returns `{ data, loading, error, refresh }`.
  */
 export function useLiveQuery<T>(
-  fetcher: () => Promise<T>,
+  fetcher: (signal?: AbortSignal) => Promise<T>,
   options: LiveQueryOptions,
-) {
+): LiveQueryResult<T> {
   const {
     table,
     event = '*',
-    filter,
     pollInterval = 10000,
     enabled = true,
   } = options
@@ -46,15 +54,30 @@ export function useLiveQuery<T>(
   const fetcherRef = useRef(fetcher)
   fetcherRef.current = fetcher
 
+  const abortRef = useRef<AbortController | null>(null)
+
   const doFetch = useCallback(async () => {
+    // Abort any in-flight fetch
+    if (abortRef.current) {
+      abortRef.current.abort()
+    }
+    const controller = new AbortController()
+    abortRef.current = controller
+
     try {
-      const result = await fetcherRef.current()
-      setData(result)
-      setError(null)
+      const result = await fetcherRef.current(controller.signal)
+      if (!controller.signal.aborted) {
+        setData(result)
+        setError(null)
+      }
     } catch (err) {
-      setError(err)
+      if (!controller.signal.aborted) {
+        setError(err)
+      }
     } finally {
-      setLoading(false)
+      if (!controller.signal.aborted) {
+        setLoading(false)
+      }
     }
   }, [])
 
@@ -63,6 +86,12 @@ export function useLiveQuery<T>(
     if (!enabled) return
     setLoading(true)
     doFetch()
+
+    return () => {
+      if (abortRef.current) {
+        abortRef.current.abort()
+      }
+    }
   }, [doFetch, enabled])
 
   // Supabase Realtime subscription
@@ -75,26 +104,17 @@ export function useLiveQuery<T>(
     let channel: ReturnType<typeof supabase.channel>
 
     try {
-      const filterConfig: Record<string, unknown> = {
+      const config = {
         event,
         schema: 'public',
         table,
-      }
-      if (filter && Object.keys(filter).length > 0) {
-        // For column-level filtering, Supabase expects event-specific filter
-        // We'll handle this by doing a generic subscription
-      }
+      } as const
 
       channel = supabase
         .channel(channelName)
         .on(
-          'postgres_changes',
-          { event, schema: 'public', table } as {
-            event: string
-            schema: string
-            table: string
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          } as any,
+          'postgres_changes' as const,
+          config,
           (_payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
             doFetch()
           },

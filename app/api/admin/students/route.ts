@@ -1,15 +1,20 @@
 import { NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
+import { requireTeacher, csrfProtection } from '@/lib/api-auth'
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json()
-    const { action, secret, orgId, studentId, password, fullName } = body
-    const username = (body.username || '').toLowerCase().trim()
+    // CSRF check
+    const csrfError = csrfProtection(request)
+    if (csrfError) return csrfError
 
-    if (secret !== process.env.WIPE_SECRET) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    // Session auth
+    const { errorResponse } = await requireTeacher()
+    if (errorResponse) return errorResponse
+
+    const body = await request.json()
+    const { action, orgId, studentId, password, fullName } = body
+    const username = (body.username || '').toLowerCase().trim()
 
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
     if (!serviceKey) {

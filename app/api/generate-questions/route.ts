@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { csrfProtection } from '@/lib/api-auth'
 
 async function generateViaAI(subtopicTitle: string, lessonContent: string, existingQuestions: string = ''): Promise<string> {
   let prompt = `You are an expert OCR GCSE Computer Science examiner. Generate 5 exam-style questions based ONLY on the following lesson content for "${subtopicTitle}".
@@ -106,6 +107,9 @@ function parseQuestionsJson(rawContent: string): { questions: unknown[]; rawText
 }
 
 export async function POST(request: Request) {
+  // CSRF check
+  const csrfError = csrfProtection(request)
+  if (csrfError) return csrfError
   const supabase = await createClient()
 
   // Verify authentication

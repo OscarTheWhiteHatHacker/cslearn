@@ -1,6 +1,12 @@
+import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import { formatDate } from '@/lib/formatters'
+
+export const metadata: Metadata = {
+  title: 'Answer Details',
+}
 
 interface AnswerData {
   id: string
@@ -226,17 +232,10 @@ export default async function TeacherAnswerReviewPage({
           <div>
             <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Submitted</p>
             <p className="mt-1 text-base font-semibold text-gray-900">
-              {new Date(answer.submitted_at).toLocaleDateString('en-GB', {
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric',
-              })}
+              {formatDate(answer.submitted_at, { day: 'numeric', month: 'long', year: 'numeric' })}
             </p>
             <p className="text-sm text-gray-500">
-              {new Date(answer.submitted_at).toLocaleTimeString('en-GB', {
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
+              {formatDate(answer.submitted_at, { hour: '2-digit', minute: '2-digit' })}
             </p>
           </div>
           <div>

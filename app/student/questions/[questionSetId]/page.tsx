@@ -30,6 +30,10 @@ export default function StudentQuestionSetPage({
   params: { questionSetId: string }
 }) {
   const searchParams = useSearchParams()
+
+  useEffect(() => {
+    document.title = 'Question Set | CSLearn'
+  }, [])
   const viewResults = searchParams.get('view') === 'results'
 
   const [questions, setQuestions] = useState<Question[]>([])

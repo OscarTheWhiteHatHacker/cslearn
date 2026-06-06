@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { Button } from '@/components/ui/Button'
 import Link from 'next/link'
 
 export default function LoginPage() {
@@ -10,22 +11,28 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const router = useRouter()
+  const [rateLimitRemaining, setRateLimitRemaining] = useState<number | null>(null)
   const supabase = createClient()
+  const router = useRouter()
+
+  useEffect(() => {
+    document.title = 'Sign In | CSLearn'
+  }, [])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError(null)
+    setRateLimitRemaining(null)
 
     try {
       if (!username.trim()) {
-        setError('Please enter your username')
+        setError('Invalid credentials')
         setLoading(false)
         return
       }
 
-      // Look up the email from profiles by username via server API
+      // Look up the email from profiles by username via server API (no auth required)
       let loginEmail: string | null = null
       try {
         const lookupRes = await fetch('/api/lookup-username', {
@@ -33,19 +40,24 @@ export default function LoginPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             username: username.trim().toLowerCase(),
-            secret: '3d4bf1dcdfb5ba90dd92dfd83a364d40ac28e41d',
           }),
         })
         if (lookupRes.ok) {
           const lookupData = await lookupRes.json()
           loginEmail = lookupData.email
         }
+
+        // Check for rate limit headers
+        const remaining = lookupRes.headers.get('X-RateLimit-Remaining')
+        if (remaining) {
+          setRateLimitRemaining(parseInt(remaining, 10))
+        }
       } catch {
         // fall through
       }
 
       if (!loginEmail) {
-        setError('No account found with that username')
+        setError('Invalid credentials')
         setLoading(false)
         return
       }
@@ -56,31 +68,44 @@ export default function LoginPage() {
       })
 
       if (error) {
-        setError(error.message)
+        // Always show generic error to prevent username enumeration
+        setError('Invalid credentials')
         setLoading(false)
         return
       }
 
       router.push('/')
       router.refresh()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An unexpected error occurred')
+    } catch {
+      setError('Invalid credentials')
       setLoading(false)
     }
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4">
-      <div className="w-full max-w-md space-y-8">
+    <section className="relative flex min-h-screen items-center justify-center overflow-hidden px-4">
+      {/* Subtle background pattern */}
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(99,102,241,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(99,102,241,0.03)_1px,transparent_1px)] bg-[size:48px_48px] [mask-image:radial-gradient(ellipse_at_center,black_40%,transparent_70%)]" />
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-indigo-50/20 to-transparent" />
+
+      <div className="relative w-full max-w-md space-y-8">
         <div className="text-center">
           <img src="/logo.svg" alt="CSLearn" className="mx-auto h-36 w-auto mb-4" />
-          <p className="text-gray-600">Sign in with your username</p>
+          <h1 className="text-gray-600 text-lg font-medium">Sign in with your username</h1>
         </div>
 
         <form onSubmit={handleLogin} className="mt-8 space-y-6">
           {error && (
             <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">
               {error}
+            </div>
+          )}
+
+          {rateLimitRemaining !== null && rateLimitRemaining <= 5 && (
+            <div className="rounded-md bg-yellow-50 p-3 text-sm text-yellow-700">
+              {rateLimitRemaining <= 0
+                ? 'Too many login attempts. Please try again later.'
+                : `${rateLimitRemaining} login attempt${rateLimitRemaining === 1 ? '' : 's'} remaining before rate limit.`}
             </div>
           )}
 
@@ -114,13 +139,14 @@ export default function LoginPage() {
             />
           </div>
 
-          <button
+          <Button
             type="submit"
-            disabled={loading}
-            className="w-full rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50"
+            loading={loading}
+            loadingText="Signing in..."
+            className="w-full"
           >
-            {loading ? 'Signing in...' : 'Sign in'}
-          </button>
+            Sign in
+          </Button>
 
           <p className="text-center text-sm text-gray-600">
             Don&apos;t have an account?{' '}
@@ -130,6 +156,6 @@ export default function LoginPage() {
           </p>
         </form>
       </div>
-    </div>
+    </section>
   )
 }

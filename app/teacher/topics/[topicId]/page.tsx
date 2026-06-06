@@ -1,6 +1,11 @@
+import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import TopicClient from './topic-client'
+
+export const metadata: Metadata = {
+  title: 'Topic Details',
+}
 
 async function getTopic(topicId: string) {
   const supabase = await createClient()

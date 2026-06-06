@@ -1,6 +1,11 @@
+import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import SubtopicClient from './subtopic-client'
+
+export const metadata: Metadata = {
+  title: 'Subtopic Editor',
+}
 
 interface LessonContent {
   learning_objectives: string[]

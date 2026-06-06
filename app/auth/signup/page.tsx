@@ -1,78 +1,155 @@
 'use client'
 
-import { useState } from 'react'
+import { useReducer, useEffect, type FormEvent } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { Input } from '@/components/ui/Input'
+import { Button } from '@/components/ui/Button'
 
 type RoleType = 'student' | 'teacher' | 'setup'
 type SchoolAction = 'create' | 'join'
 
+interface SignupState {
+  step: number
+  role: RoleType | null
+  schoolAction: SchoolAction
+  schoolName: string
+  schoolSlug: string
+  username: string
+  password: string
+  fullName: string
+  error: string | null
+  loading: boolean
+  success: boolean
+  successMessage: string
+}
+
+type SignupAction =
+  | { type: 'SET_STEP'; step: number }
+  | { type: 'SET_ROLE'; role: RoleType }
+  | { type: 'SET_SCHOOL_ACTION'; action: SchoolAction }
+  | { type: 'SET_SCHOOL_NAME'; name: string }
+  | { type: 'SET_SCHOOL_SLUG'; slug: string }
+  | { type: 'SET_USERNAME'; username: string }
+  | { type: 'SET_PASSWORD'; password: string }
+  | { type: 'SET_FULL_NAME'; fullName: string }
+  | { type: 'SET_ERROR'; error: string | null }
+  | { type: 'SET_LOADING'; loading: boolean }
+  | { type: 'SET_SUCCESS'; message: string }
+  | { type: 'RESET_ERROR' }
+
+const initialState: SignupState = {
+  step: 1,
+  role: null,
+  schoolAction: 'create',
+  schoolName: '',
+  schoolSlug: '',
+  username: '',
+  password: '',
+  fullName: '',
+  error: null,
+  loading: false,
+  success: false,
+  successMessage: '',
+}
+
+function signupReducer(state: SignupState, action: SignupAction): SignupState {
+  switch (action.type) {
+    case 'SET_STEP':
+      return { ...state, step: action.step }
+    case 'SET_ROLE':
+      return { ...state, role: action.role }
+    case 'SET_SCHOOL_ACTION':
+      return { ...state, schoolAction: action.action }
+    case 'SET_SCHOOL_NAME':
+      return { ...state, schoolName: action.name }
+    case 'SET_SCHOOL_SLUG':
+      return { ...state, schoolSlug: action.slug }
+    case 'SET_USERNAME':
+      return { ...state, username: action.username }
+    case 'SET_PASSWORD':
+      return { ...state, password: action.password }
+    case 'SET_FULL_NAME':
+      return { ...state, fullName: action.fullName }
+    case 'SET_ERROR':
+      return { ...state, error: action.error }
+    case 'RESET_ERROR':
+      return { ...state, error: null }
+    case 'SET_LOADING':
+      return { ...state, loading: action.loading }
+    case 'SET_SUCCESS':
+      return { ...state, success: true, successMessage: action.message }
+    default:
+      return state
+  }
+}
+
+function validatePassword(password: string): string | null {
+  if (password.length < 8) return 'Password must be at least 8 characters long'
+  if (!/[A-Z]/.test(password)) return 'Password must contain at least one uppercase letter'
+  if (!/[a-z]/.test(password)) return 'Password must contain at least one lowercase letter'
+  if (!/[0-9]/.test(password)) return 'Password must contain at least one number'
+  if (!/[^A-Za-z0-9]/.test(password)) return 'Password must contain at least one special character (e.g. !@#$%^&*)'
+  return null
+}
+
 export default function SignupPage() {
   const router = useRouter()
   const supabase = createClient()
+  const [state, dispatch] = useReducer(signupReducer, initialState)
 
-  // Step management
-  const [step, setStep] = useState(1)
+  useEffect(() => {
+    document.title = 'Sign Up | CSLearn'
+  }, [])
 
-  // Step 1: Role selection
-  const [role, setRole] = useState<RoleType | null>(null)
-
-  // Step 2: School info
-  const [schoolAction, setSchoolAction] = useState<SchoolAction>('create')
-  const [schoolName, setSchoolName] = useState('')
-  const [schoolSlug, setSchoolSlug] = useState('')
-
-  // Step 3: Personal details
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
-  const [fullName, setFullName] = useState('')
-
-  // State
-  const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [success, setSuccess] = useState(false)
-  const [successMessage, setSuccessMessage] = useState('')
+  const { step, role, schoolAction, schoolName, schoolSlug, username, password, fullName, error, loading, success, successMessage } = state
 
   const isStudent = role === 'student'
   const isTeacher = role === 'teacher' || role === 'setup'
 
-  // Generate slug from name
   const slugify = (text: string) =>
     text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 
   const handleSchoolNext = () => {
-    setError(null)
+    dispatch({ type: 'RESET_ERROR' })
     if (schoolAction === 'create') {
       if (!schoolName.trim()) {
-        setError('Please enter a school name')
+        dispatch({ type: 'SET_ERROR', error: 'Please enter a school name' })
         return
       }
     } else {
       if (!schoolSlug.trim()) {
-        setError('Please enter a school code')
+        dispatch({ type: 'SET_ERROR', error: 'Please enter a school code' })
         return
       }
     }
-    setStep(3)
+    dispatch({ type: 'SET_STEP', step: 3 })
   }
 
   const handleRoleSelect = (selectedRole: RoleType) => {
-    setRole(selectedRole)
+    dispatch({ type: 'SET_ROLE', role: selectedRole })
     if (selectedRole === 'student') {
-      // Students go straight to school code step
-      setSchoolAction('join')
+      dispatch({ type: 'SET_SCHOOL_ACTION', action: 'join' })
+    } else if (selectedRole === 'setup') {
+      dispatch({ type: 'SET_SCHOOL_ACTION', action: 'create' })
     } else {
-      // Teachers choose create or join
-      setSchoolAction('create')
+      dispatch({ type: 'SET_SCHOOL_ACTION', action: 'create' })
     }
-    setStep(2)
+    dispatch({ type: 'SET_STEP', step: 2 })
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
-    setLoading(true)
-    setError(null)
+    dispatch({ type: 'SET_LOADING', loading: true })
+    dispatch({ type: 'RESET_ERROR' })
+
+    const pwdError = validatePassword(password)
+    if (pwdError) {
+      dispatch({ type: 'SET_ERROR', error: pwdError })
+      dispatch({ type: 'SET_LOADING', loading: false })
+      return
+    }
 
     try {
       // Check if username is already taken
@@ -84,18 +161,16 @@ export default function SignupPage() {
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       if ((existingUsername as any[] | null)?.[0]) {
-        setError('This username is already taken. Please choose another one.')
-        setLoading(false)
+        dispatch({ type: 'SET_ERROR', error: 'This username is already taken. Please choose another one.' })
+        dispatch({ type: 'SET_LOADING', loading: false })
         return
       }
 
-      // Build request to server-side signup API
       const signupPayload: Record<string, unknown> = {
         username: username.trim().toLowerCase(),
         password,
         fullName: fullName.trim(),
         role: isStudent ? 'student' : 'teacher',
-        secret: '3d4bf1dcdfb5ba90dd92dfd83a364d40ac28e41d',
       }
 
       if (isTeacher && schoolAction === 'create') {
@@ -114,8 +189,8 @@ export default function SignupPage() {
       const result = await response.json()
 
       if (!response.ok) {
-        setError(result.error || 'Failed to create account')
-        setLoading(false)
+        dispatch({ type: 'SET_ERROR', error: result.error || 'Failed to create account' })
+        dispatch({ type: 'SET_LOADING', loading: false })
         return
       }
 
@@ -126,7 +201,6 @@ export default function SignupPage() {
       })
 
       if (!signInError) {
-        // Now authenticated - update profile with username and org
         const { data: { user } } = await supabase.auth.getUser()
         if (user) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -142,18 +216,17 @@ export default function SignupPage() {
         return
       }
 
-      setSuccessMessage('Account created successfully! You can now sign in.')
-      setSuccess(true)
+      dispatch({ type: 'SET_SUCCESS', message: 'Account created successfully! You can now sign in.' })
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An unexpected error occurred')
+      dispatch({ type: 'SET_ERROR', error: err instanceof Error ? err.message : 'An unexpected error occurred' })
     } finally {
-      setLoading(false)
+      dispatch({ type: 'SET_LOADING', loading: false })
     }
   }
 
   if (success) {
     return (
-      <div className="flex min-h-screen items-center justify-center px-4">
+      <section className="flex min-h-screen items-center justify-center px-4">
         <div className="w-full max-w-md text-center">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
             <svg className="h-8 w-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -169,16 +242,20 @@ export default function SignupPage() {
             Go to login
           </Link>
         </div>
-      </div>
+      </section>
     )
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md space-y-8">
+    <section className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-12">
+      {/* Subtle background pattern */}
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(99,102,241,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(99,102,241,0.03)_1px,transparent_1px)] bg-[size:48px_48px] [mask-image:radial-gradient(ellipse_at_center,black_40%,transparent_70%)]" />
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-indigo-50/20 to-transparent" />
+
+      <div className="relative w-full max-w-md space-y-8">
         <div className="text-center">
           <img src="/logo.svg" alt="CSLearn" className="mx-auto h-36 w-auto mb-4" />
-          <p className="text-gray-600">Create your account</p>
+          <h1 className="text-gray-600 text-lg font-medium">Create your account</h1>
         </div>
 
         {/* Step indicator */}
@@ -295,7 +372,7 @@ export default function SignupPage() {
                   <div className="flex gap-3">
                     <button
                       type="button"
-                      onClick={() => setSchoolAction('create')}
+                      onClick={() => dispatch({ type: 'SET_SCHOOL_ACTION', action: 'create' })}
                       className={`flex-1 rounded-lg border p-3 text-center text-sm font-medium transition-all ${
                         schoolAction === 'create'
                           ? 'border-indigo-600 bg-indigo-50 text-indigo-700'
@@ -306,7 +383,7 @@ export default function SignupPage() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => setSchoolAction('join')}
+                      onClick={() => dispatch({ type: 'SET_SCHOOL_ACTION', action: 'join' })}
                       className={`flex-1 rounded-lg border p-3 text-center text-sm font-medium transition-all ${
                         schoolAction === 'join'
                           ? 'border-indigo-600 bg-indigo-50 text-indigo-700'
@@ -327,7 +404,7 @@ export default function SignupPage() {
                         type="text"
                         required
                         value={schoolName}
-                        onChange={(e) => setSchoolName(e.target.value)}
+                        onChange={(e) => dispatch({ type: 'SET_SCHOOL_NAME', name: e.target.value })}
                         className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm text-gray-900"
                         placeholder="e.g. Springfield High School"
                       />
@@ -347,7 +424,7 @@ export default function SignupPage() {
                         type="text"
                         required
                         value={schoolSlug}
-                        onChange={(e) => setSchoolSlug(e.target.value)}
+                        onChange={(e) => dispatch({ type: 'SET_SCHOOL_SLUG', slug: e.target.value })}
                         className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm text-gray-900"
                         placeholder="e.g. springfield-high"
                       />
@@ -367,7 +444,7 @@ export default function SignupPage() {
                     type="text"
                     required
                     value={schoolSlug}
-                    onChange={(e) => setSchoolSlug(e.target.value)}
+                    onChange={(e) => dispatch({ type: 'SET_SCHOOL_SLUG', slug: e.target.value })}
                     className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm text-gray-900"
                     placeholder="e.g. springfield-high"
                   />
@@ -377,17 +454,17 @@ export default function SignupPage() {
                 </div>
               )}
 
-              <button
+              <Button
                 type="button"
                 onClick={handleSchoolNext}
-                className="w-full rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                className="w-full"
               >
                 Continue
-              </button>
+              </Button>
 
               <button
                 type="button"
-                onClick={() => setStep(1)}
+                onClick={() => dispatch({ type: 'SET_STEP', step: 1 })}
                 className="w-full text-center text-sm text-gray-500 hover:text-gray-700"
               >
                 &larr; Back
@@ -400,88 +477,79 @@ export default function SignupPage() {
             <div className="space-y-4">
               <h2 className="text-lg font-semibold text-gray-900">Your details</h2>
 
-              {isTeacher && (
-                <div>
-                  <label htmlFor="username" className="block text-sm font-medium text-gray-700">
-                    Username
-                  </label>
-                  <input
-                    id="username"
-                    type="text"
-                    required
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm text-gray-900"
-                    placeholder="e.g. jdoe"
-                  />
-                  <p className="mt-1 text-xs text-gray-500">
-                    This will be your username to sign in
-                  </p>
+              <Input
+                id="username"
+                label="Username"
+                value={username}
+                onChange={(e) => dispatch({ type: 'SET_USERNAME', username: e.target.value })}
+                placeholder={isStudent ? 'e.g. johndoe' : 'e.g. jdoe'}
+                helperText="This will be your username to sign in"
+                required
+              />
+
+              <Input
+                id="fullName"
+                label="Full name"
+                value={fullName}
+                onChange={(e) => dispatch({ type: 'SET_FULL_NAME', fullName: e.target.value })}
+                placeholder="John Doe"
+                required
+              />
+
+              <Input
+                id="password"
+                label="Password"
+                type="password"
+                value={password}
+                onChange={(e) => dispatch({ type: 'SET_PASSWORD', password: e.target.value })}
+                placeholder="••••••••"
+                helperText="Minimum 8 characters, must include uppercase, lowercase, number, and special character"
+                minLength={8}
+                required
+              />
+
+              {password && (
+                <div className="mt-2 space-y-1">
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className={password.length >= 8 ? 'text-green-600' : 'text-gray-400'}>
+                      {password.length >= 8 ? '✓' : '○'} At least 8 characters
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className={/[A-Z]/.test(password) ? 'text-green-600' : 'text-gray-400'}>
+                      {/[A-Z]/.test(password) ? '✓' : '○'} One uppercase letter
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className={/[a-z]/.test(password) ? 'text-green-600' : 'text-gray-400'}>
+                      {/[a-z]/.test(password) ? '✓' : '○'} One lowercase letter
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className={/[0-9]/.test(password) ? 'text-green-600' : 'text-gray-400'}>
+                      {/[0-9]/.test(password) ? '✓' : '○'} One number
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className={/[^A-Za-z0-9]/.test(password) ? 'text-green-600' : 'text-gray-400'}>
+                      {/[^A-Za-z0-9]/.test(password) ? '✓' : '○'} One special character
+                    </span>
+                  </div>
                 </div>
               )}
 
-              {isStudent && (
-                <div>
-                  <label htmlFor="username" className="block text-sm font-medium text-gray-700">
-                    Username
-                  </label>
-                  <input
-                    id="username"
-                    type="text"
-                    required
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm text-gray-900"
-                    placeholder="e.g. johndoe"
-                  />
-                  <p className="mt-1 text-xs text-gray-500">
-                    This will be used as your username to sign in
-                  </p>
-                </div>
-              )}
-
-              <div>
-                <label htmlFor="fullName" className="block text-sm font-medium text-gray-700">
-                  Full name
-                </label>
-                <input
-                  id="fullName"
-                  type="text"
-                  required
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm text-gray-900"
-                  placeholder="John Doe"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                  Password
-                </label>
-                <input
-                  id="password"
-                  type="password"
-                  required
-                  minLength={6}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm text-gray-900"
-                  placeholder="••••••••"
-                />
-              </div>
-
-              <button
+              <Button
                 type="submit"
-                disabled={loading}
-                className="w-full rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50"
+                loading={loading}
+                loadingText="Creating account..."
+                className="w-full"
               >
-                {loading ? 'Creating account...' : 'Create account'}
-              </button>
+                Create account
+              </Button>
 
               <button
                 type="button"
-                onClick={() => setStep(2)}
+                onClick={() => dispatch({ type: 'SET_STEP', step: 2 })}
                 className="w-full text-center text-sm text-gray-500 hover:text-gray-700"
               >
                 &larr; Back
@@ -499,6 +567,6 @@ export default function SignupPage() {
           )}
         </form>
       </div>
-    </div>
+    </section>
   )
 }

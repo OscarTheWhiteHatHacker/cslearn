@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { csrfProtection } from '@/lib/api-auth'
 
 interface AnswerItem {
   questionIndex: number
@@ -100,6 +101,10 @@ function delay(ms: number): Promise<void> {
 }
 
 export async function POST(request: Request) {
+  // CSRF check
+  const csrfError = csrfProtection(request)
+  if (csrfError) return csrfError
+
   const supabase = await createClient()
 
   // Verify authentication

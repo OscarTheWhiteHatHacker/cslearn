@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { formatDate } from '@/lib/formatters'
 
 interface Question {
   question: string
@@ -276,7 +277,7 @@ export default function AssignQuestionsButton({ subtopicId, lessonIndex }: Assig
                 <div className="flex items-center gap-2">
                   <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">Published</span>
                   <span className="text-sm text-gray-700">{set.questions_json.length} questions</span>
-                  <span className="text-xs text-gray-500">{new Date(set.created_at).toLocaleDateString()}</span>
+                  <span className="text-xs text-gray-500">{formatDate(set.created_at)}</span>
                 </div>
               </div>
               <button
@@ -294,7 +295,7 @@ export default function AssignQuestionsButton({ subtopicId, lessonIndex }: Assig
                 <div className="flex items-center gap-2">
                   <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">Draft</span>
                   <span className="text-sm text-gray-700">{set.questions_json.length} questions</span>
-                  <span className="text-xs text-gray-500">{new Date(set.created_at).toLocaleDateString()}</span>
+                  <span className="text-xs text-gray-500">{formatDate(set.created_at)}</span>
                 </div>
               </div>
               <div className="flex items-center gap-2">

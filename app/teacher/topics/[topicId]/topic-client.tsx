@@ -5,6 +5,7 @@ import Link from 'next/link'
 import ReleaseToggle from '@/components/release-toggle'
 import LessonReleaseToggle from '@/components/lesson-release-toggle'
 import AssignQuestionsButton from '@/components/assign-questions-button'
+import { EmptyState } from '@/components/EmptyState'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export default function TopicClient({ topicData }: any) {
@@ -53,6 +54,7 @@ export default function TopicClient({ topicData }: any) {
             <div key={subtopic.id} className="rounded-lg border border-gray-200 bg-white shadow-sm">
               {/* Subtopic header - clickable */}
               <button
+                type="button"
                 onClick={() => toggleSubtopic(subtopic.id)}
                 className={`w-full text-left flex items-center gap-4 p-4 transition-all ${
                   isExpanded ? 'border-b border-gray-100' : ''
@@ -89,6 +91,7 @@ export default function TopicClient({ topicData }: any) {
                         const isReleased = releaseSet.has(lesson.id)
                         return (
                           <button
+                            type="button"
                             key={lesson.id}
                             onClick={() => selectLesson(subtopic.id, i)}
                             className={`w-full text-left flex items-center gap-4 rounded-lg border p-3 transition-all ${
@@ -111,7 +114,6 @@ export default function TopicClient({ topicData }: any) {
                             <div onClick={(e: any) => e.stopPropagation()} className="flex-shrink-0">
                               <LessonReleaseToggle
                                 lessonId={lesson.id}
-                                lessonTitle={lesson.title}
                                 initiallyReleased={isReleased}
                               />
                             </div>
@@ -215,9 +217,9 @@ export default function TopicClient({ topicData }: any) {
       </div>
 
       {(!subtopics || subtopics.length === 0) && (
-        <div className="rounded-lg border-2 border-dashed border-gray-300 p-12 text-center">
-          <p className="text-gray-500">No subtopics found for this topic.</p>
-        </div>
+        <EmptyState
+          title="No subtopics found for this topic."
+        />
       )}
     </div>
   )

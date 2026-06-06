@@ -1,8 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { SkeletonStudentTopics } from '@/components/Skeleton'
+import { ErrorState } from '@/components/ErrorState'
+import { EmptyState } from '@/components/EmptyState'
 
 type TopicSummary = {
   id: string
@@ -96,12 +99,30 @@ async function getReleasedTopics(): Promise<TopicSummary[]> {
 export default function StudentTopicsPage() {
   const [topics, setTopics] = useState<TopicSummary[]>([])
   const [loading, setLoading] = useState(true)
+  const [errorState, setErrorState] = useState<string | null>(null)
+  const abortRef = useRef<AbortController | null>(null)
 
-  async function load() {
-    const result = await getReleasedTopics()
-    setTopics(result)
-    setLoading(false)
-  }
+  useEffect(() => {
+    document.title = 'My Topics | CSLearn'
+  }, [])
+
+  const load = useCallback(async () => {
+    if (abortRef.current) abortRef.current.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
+
+    try {
+      const result = await getReleasedTopics()
+      if (controller.signal.aborted) return
+      setTopics(result)
+      setErrorState(null)
+      setLoading(false)
+    } catch (err) {
+      if (controller.signal.aborted) return
+      setErrorState(err instanceof Error ? err.message : 'Failed to load topics')
+      setLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -133,36 +154,38 @@ export default function StudentTopicsPage() {
 
     return () => {
       cancelled = true
+      if (abortRef.current) abortRef.current.abort()
       if (interval) clearInterval(interval)
       if (channel) supabase.removeChannel(channel)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [load])
 
   if (loading) {
+    return <SkeletonStudentTopics />
+  }
+
+  if (errorState) {
     return (
-      <div className="space-y-6">
-        <h1 className="text-2xl font-bold text-gray-900">My Topics</h1>
-        <div className="grid gap-6 md:grid-cols-2">
-          {[1, 2].map((i) => (
-            <div key={i} className="h-32 animate-pulse rounded-lg border bg-white p-6 shadow-sm" />
-          ))}
-        </div>
-      </div>
+      <ErrorState
+        title="Failed to load topics"
+        message={errorState}
+        onRetry={() => { setErrorState(null); setLoading(true); load() }}
+      />
     )
   }
 
   return (
-    <div className="space-y-6">
+    <section className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">My Topics</h1>
-          <p className="mt-1 text-gray-600">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">My Topics</h1>
+          <p className="mt-1 text-gray-600 dark:text-gray-400">
             Browse topics released by your teacher and start learning.
           </p>
         </div>
         {topics.length > 0 && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-3 py-1 text-xs font-medium text-green-700">
+          <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-3 py-1 text-xs font-medium text-green-700 dark:bg-green-900 dark:text-green-300">
             <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
             Live
           </span>
@@ -175,38 +198,33 @@ export default function StudentTopicsPage() {
             <Link
               key={topic.id}
               href={`/student/topics/${topic.id}`}
-              className="group rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition-all hover:shadow-md hover:border-blue-300"
+              className="group rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition-all hover:shadow-md hover:border-blue-300 dark:bg-gray-800 dark:border-gray-700 dark:hover:border-blue-600"
             >
               <div className="flex items-start justify-between">
                 <div>
-                  <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
+                  <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900 dark:text-green-300">
                     J277/{topic.component}
                   </span>
-                  <h2 className="mt-2 text-lg font-semibold text-gray-900 group-hover:text-blue-600">
+                  <h2 className="mt-2 text-lg font-semibold text-gray-900 group-hover:text-blue-600 dark:text-gray-100 dark:group-hover:text-blue-400">
                     {topic.title}
                   </h2>
                 </div>
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-50 text-sm font-bold text-green-600">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-50 text-sm font-bold text-green-600 dark:bg-green-900 dark:text-green-300">
                   {topic.subtopic_count}
                 </div>
               </div>
-              <p className="mt-3 text-sm text-gray-500">
+              <p className="mt-3 text-sm text-gray-500 dark:text-gray-400">
                 {topic.subtopic_count} released subtopic{topic.subtopic_count !== 1 ? 's' : ''}
               </p>
             </Link>
           ))}
         </div>
       ) : (
-        <div className="rounded-lg border-2 border-dashed border-gray-300 p-12 text-center">
-          <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-          </svg>
-          <h2 className="mt-4 text-lg font-semibold text-gray-700">No topics released yet</h2>
-          <p className="mt-2 text-sm text-gray-500">
-            Your teacher hasn&apos;t released any topics for you to study yet. Check back later!
-          </p>
-        </div>
+        <EmptyState
+          title="No topics released yet"
+          description="Your teacher hasn't released any topics for you to study yet. Check back later!"
+        />
       )}
-    </div>
+    </section>
   )
 }

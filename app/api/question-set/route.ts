@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { csrfProtection } from '@/lib/api-auth'
 
 export async function GET(request: Request) {
   const supabase = await createClient()
@@ -68,6 +69,10 @@ export async function GET(request: Request) {
 }
 
 export async function PATCH(request: Request) {
+  // CSRF check
+  const csrfError = csrfProtection(request)
+  if (csrfError) return csrfError
+
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
@@ -140,6 +145,10 @@ export async function PATCH(request: Request) {
 }
 
 export async function POST(request: Request) {
+  // CSRF check
+  const csrfError = csrfProtection(request)
+  if (csrfError) return csrfError
+
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
@@ -196,6 +205,10 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  // CSRF check
+  const csrfError = csrfProtection(request)
+  if (csrfError) return csrfError
+
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()

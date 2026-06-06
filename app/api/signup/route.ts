@@ -1,15 +1,46 @@
 import { NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
+import { z } from 'zod'
+
+/**
+ * Zod schema for signup request body validation.
+ */
+const signupSchema = z.object({
+  username: z
+    .string()
+    .min(1, 'Username is required')
+    .max(50, 'Username must be 50 characters or less')
+    .transform((val) => val.toLowerCase().trim()),
+  password: z
+    .string()
+    .min(8, 'Password must be at least 8 characters long')
+    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+    .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+    .regex(/[0-9]/, 'Password must contain at least one number')
+    .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character (e.g. !@#$%^&*)'),
+  fullName: z.string().min(1, 'Full name is required').max(100, 'Full name must be 100 characters or less'),
+  role: z.enum(['student', 'teacher']),
+  orgSlug: z.string().max(100).optional().default(''),
+  orgAction: z.enum(['create', 'join']).optional(),
+  orgName: z.string().max(200).optional().default(''),
+})
 
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { password, fullName, role, orgSlug, orgAction, orgName, secret } = body
-    const username = (body.username || '').toLowerCase().trim()
 
-    if (secret !== process.env.WIPE_SECRET) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // Validate with Zod
+    const validationResult = signupSchema.safeParse(body)
+
+    if (!validationResult.success) {
+      const firstError = validationResult.error.issues[0]
+      return NextResponse.json(
+        { error: firstError?.message || 'Invalid request body' },
+        { status: 400 },
+      )
     }
+
+    const { username, password, fullName, role, orgSlug, orgAction, orgName } = validationResult.data
 
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
     if (!serviceKey) {

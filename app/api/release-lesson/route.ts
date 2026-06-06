@@ -1,7 +1,12 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { csrfProtection } from '@/lib/api-auth'
 
 export async function POST(request: Request) {
+  // CSRF check
+  const csrfError = csrfProtection(request)
+  if (csrfError) return csrfError
+
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
