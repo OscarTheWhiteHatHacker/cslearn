@@ -3,11 +3,13 @@
 import { useEffect, useState } from 'react'
 
 export function useOffline() {
-  const [isOffline, setIsOffline] = useState(
-    typeof navigator !== 'undefined' ? !navigator.onLine : false,
-  )
+  // Always assume online initially to avoid SSR/hydration flash
+  const [isOffline, setIsOffline] = useState(false)
 
   useEffect(() => {
+    // Check actual status after mount (avoids SSR/hydration race)
+    setIsOffline(typeof navigator !== 'undefined' ? !navigator.onLine : false)
+
     function handleOffline() {
       setIsOffline(true)
     }
