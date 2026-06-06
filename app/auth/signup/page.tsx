@@ -19,6 +19,7 @@ interface SignupState {
   schoolName: string
   schoolSlug: string
   username: string
+  email: string
   password: string
   fullName: string
   error: string | null
@@ -34,6 +35,7 @@ type SignupAction =
   | { type: 'SET_SCHOOL_NAME'; name: string }
   | { type: 'SET_SCHOOL_SLUG'; slug: string }
   | { type: 'SET_USERNAME'; username: string }
+  | { type: 'SET_EMAIL'; email: string }
   | { type: 'SET_PASSWORD'; password: string }
   | { type: 'SET_FULL_NAME'; fullName: string }
   | { type: 'SET_ERROR'; error: string | null }
@@ -48,6 +50,7 @@ const initialState: SignupState = {
   schoolName: '',
   schoolSlug: '',
   username: '',
+  email: '',
   password: '',
   fullName: '',
   error: null,
@@ -70,6 +73,8 @@ function signupReducer(state: SignupState, action: SignupAction): SignupState {
       return { ...state, schoolSlug: action.slug }
     case 'SET_USERNAME':
       return { ...state, username: action.username }
+    case 'SET_EMAIL':
+      return { ...state, email: action.email }
     case 'SET_PASSWORD':
       return { ...state, password: action.password }
     case 'SET_FULL_NAME':
@@ -105,7 +110,7 @@ export default function SignupPage() {
     document.title = 'Sign Up | CSLearn'
   }, [])
 
-  const { step, role, schoolAction, schoolName, schoolSlug, username, password, fullName, error, loading, success, successMessage } = state
+  const { step, role, schoolAction, schoolName, schoolSlug, username, email, password, fullName, error, loading, success, successMessage } = state
 
   const isStudent = role === 'student'
   const isTeacher = role === 'teacher' || role === 'setup'
@@ -173,6 +178,7 @@ export default function SignupPage() {
         password,
         fullName: fullName.trim(),
         role: isStudent ? 'student' : 'teacher',
+        email: isTeacher ? email.trim() : undefined,
       }
 
       if (isTeacher && schoolAction === 'create') {
@@ -501,6 +507,19 @@ export default function SignupPage() {
                 placeholder="John Doe"
                 required
               />
+
+              {isTeacher && (
+                <Input
+                  id="email"
+                  label="Email address"
+                  type="email"
+                  value={email}
+                  onChange={(e) => dispatch({ type: 'SET_EMAIL', email: e.target.value })}
+                  placeholder="john@school.edu"
+                  helperText="Required for teachers. Used for account recovery."
+                  required
+                />
+              )}
 
               <Input
                 id="password"

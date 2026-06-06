@@ -19,6 +19,7 @@ const signupSchema = z.object({
     .regex(/[0-9]/, 'Password must contain at least one number')
     .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character (e.g. !@#$%^&*)'),
   fullName: z.string().min(1, 'Full name is required').max(100, 'Full name must be 100 characters or less'),
+  email: z.string().email('Please enter a valid email address').optional().or(z.literal('')),
   role: z.enum(['student', 'teacher']),
   orgSlug: z.string().max(100).optional().default(''),
   orgAction: z.enum(['create', 'join']).optional(),
@@ -40,7 +41,7 @@ export async function POST(request: Request) {
       )
     }
 
-    const { username, password, fullName, role, orgSlug, orgAction, orgName } = validationResult.data
+    const { username, password, fullName, role, email, orgSlug, orgAction, orgName } = validationResult.data
 
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
     if (!serviceKey) {
@@ -52,8 +53,8 @@ export async function POST(request: Request) {
       cookies: { getAll: () => [], setAll: () => {} },
     })
 
-    // 1. Generate placeholder email
-    const placeholderEmail = `${username}@${role}.cslearn.io`
+    // 1. Determine email: real email for teachers, placeholder for students
+    const placeholderEmail = role === 'teacher' && email ? email : `${username}@${role}.cslearn.io`
 
     // 2. Create user in auth (auto-confirmed by admin API)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

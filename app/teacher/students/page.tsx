@@ -50,6 +50,25 @@ export default function ManageStudentsPage() {
   const [lastSavedFeedback, setLastSavedFeedback] = useState<Record<string, string>>({})
   const feedbackTimers = useRef<Record<string, NodeJS.Timeout>>({})
 
+  // Reset password state
+  const [resetPwd, setResetPwd] = useState<{
+    open: boolean
+    studentId: string
+    studentName: string
+    newPassword: string
+    resetting: boolean
+    resetError: string | null
+    resetSuccess: string | null
+  }>({
+    open: false,
+    studentId: '',
+    studentName: '',
+    newPassword: '',
+    resetting: false,
+    resetError: null,
+    resetSuccess: null,
+  })
+
   // Delete confirmation state
   const [deleteConfirm, setDeleteConfirm] = useState<{
     open: boolean
@@ -284,6 +303,42 @@ export default function ManageStudentsPage() {
     setSubmitting(false)
   }
 
+  async function handleResetPassword() {
+    const { studentId, newPassword } = resetPwd
+    if (!studentId || !newPassword) return
+
+    setResetPwd((prev) => ({ ...prev, resetting: true, resetError: null, resetSuccess: null }))
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token
+
+      const res = await fetch('/api/teacher/reset-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ studentId, newPassword }),
+      })
+
+      const result = await res.json()
+
+      if (!res.ok) {
+        setResetPwd((prev) => ({ ...prev, resetError: result.error || 'Failed to reset password' }))
+      } else {
+        setResetPwd((prev) => ({ ...prev, resetSuccess: result.message || 'Password reset successfully!' }))
+        setTimeout(() => {
+          setResetPwd({ open: false, studentId: '', studentName: '', newPassword: '', resetting: false, resetError: null, resetSuccess: null })
+        }, 2000)
+      }
+    } catch {
+      setResetPwd((prev) => ({ ...prev, resetError: 'An unexpected error occurred' }))
+    } finally {
+      setResetPwd((prev) => ({ ...prev, resetting: false }))
+    }
+  }
+
   async function handleDeleteStudent() {
     const { studentId, studentName } = deleteConfirm
     setSubmitting(true)
@@ -500,8 +555,18 @@ export default function ManageStudentsPage() {
                   <div className="flex items-center gap-3">
                     <button
                       type="button"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        setResetPwd({ open: true, studentId: student.id, studentName: student.full_name, newPassword: '', resetting: false, resetError: null, resetSuccess: null })
+                      }}
+                      className="text-sm font-medium text-purple-600 hover:text-purple-900"
+                    >
+                      Reset Pwd
+                    </button>
+                    <button
+                      type="button"
                       onClick={(e) => { e.preventDefault(); setEditingId(student.id); setEditName(student.full_name); setError(null); setSuccess(null) }}
-                      className="text-sm font-medium text-accent hover:text-indigo-900"
+                      className="text-sm font-medium text-accent hover:text-accent-hover"
                     >
                       Edit
                     </button>
@@ -553,6 +618,69 @@ export default function ManageStudentsPage() {
           </div>
         )}
       </div>
+
+      {/* Reset Password Dialog */}
+      {resetPwd.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => !resetPwd.resetting && setResetPwd((prev) => ({ ...prev, open: false, resetError: null, resetSuccess: null }))}>
+          <div className="mx-4 w-full max-w-md rounded-lg bg-white p-6 shadow-xl dark:bg-surface" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Reset Password</h3>
+            <p className="mt-1 text-sm text-gray-500">
+              Setting a new password for <strong>{resetPwd.studentName}</strong>
+            </p>
+
+            {resetPwd.resetSuccess ? (
+              <div className="mt-4 rounded-md bg-green-50 p-3 text-sm text-green-700">
+                {resetPwd.resetSuccess}
+              </div>
+            ) : (
+              <>
+                {resetPwd.resetError && (
+                  <div className="mt-3 rounded-md bg-red-50 p-3 text-sm text-red-700">
+                    {resetPwd.resetError}
+                  </div>
+                )}
+
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    New Password
+                  </label>
+                  <input
+                    type="password"
+                    value={resetPwd.newPassword}
+                    onChange={(e) => setResetPwd((prev) => ({ ...prev, newPassword: e.target.value }))}
+                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm text-sm focus:border-accent focus:outline-none focus:ring-accent bg-[var(--input-bg)] text-[var(--input-text)]"
+                    placeholder="••••••••"
+                    minLength={8}
+                    required
+                  />
+                  <p className="mt-1 text-xs text-gray-500">
+                    Min 8 chars, uppercase, lowercase, number, and special character required
+                  </p>
+                </div>
+
+                <div className="mt-6 flex justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setResetPwd({ ...resetPwd, open: false, resetError: null, resetSuccess: null })}
+                    disabled={resetPwd.resetting}
+                    className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleResetPassword}
+                    disabled={resetPwd.resetting || resetPwd.newPassword.length < 8}
+                    className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-50"
+                  >
+                    {resetPwd.resetting ? 'Resetting...' : 'Reset Password'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog
