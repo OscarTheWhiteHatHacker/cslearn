@@ -15,6 +15,9 @@
   --accent-light: #eab308;
   --accent-bg: #fef9c3;
   --accent-hover: #a16207;
+  --input-bg: #ffffff;
+  --input-text: #1a1a1a;
+  --input-border: #d1d5db;
 }
 
 .dark {
@@ -30,6 +33,9 @@
   --accent-light: #c084fc;
   --accent-bg: #2a1a3a;
   --accent-hover: #9333ea;
+  --input-bg: #000000;
+  --input-text: #e5e7eb;
+  --input-border: #3b3b3b;
 }
 
 .dark body {
@@ -70,6 +76,22 @@
 
 .dark .text-gray-500 {
   color: var(--text-muted);
+}
+
+/* Input fields: black bg, white text on dark theme */
+.dark input,
+.dark select,
+.dark textarea {
+  background-color: var(--input-bg) !important;
+  color: var(--input-text) !important;
+}
+
+.dark input:-webkit-autofill,
+.dark select:-webkit-autofill,
+.dark textarea:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 30px #000000 inset !important;
+  -webkit-text-fill-color: #e5e7eb !important;
+  caret-color: #e5e7eb;
 }
 
 .dark .shadow-sm {
