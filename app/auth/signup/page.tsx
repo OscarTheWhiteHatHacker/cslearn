@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
+import ThemeToggle from '@/components/ThemeToggle'
 
 type RoleType = 'student' | 'teacher' | 'setup'
 type SchoolAction = 'create' | 'join'
@@ -248,6 +249,10 @@ export default function SignupPage() {
 
   return (
     <section className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-12">
+      {/* Theme toggle */}
+      <div className="absolute right-4 top-4 z-50">
+        <ThemeToggle />
+      </div>
       {/* Subtle background pattern */}
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(99,102,241,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(99,102,241,0.03)_1px,transparent_1px)] bg-[size:48px_48px] [mask-image:radial-gradient(ellipse_at_center,black_40%,transparent_70%)]" />
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-indigo-50/20 to-transparent" />
