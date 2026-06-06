@@ -1,6 +1,8 @@
-import { createClient } from '@/lib/supabase/server'
+'use client'
+
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
 
 type TopicRow = {
   id: string
@@ -18,26 +20,26 @@ type SubtopicRow = {
 }
 
 async function getTopic(topicId: string): Promise<TopicRow | null> {
-  const supabase = await createClient()
+  const supabase = createClient()
   const { data } = await supabase
     .from('topics')
     .select('*')
     .eq('id', topicId)
     .single()
-
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return data as any
 }
 
 async function getReleasedSubtopics(topicId: string): Promise<SubtopicRow[]> {
-  const supabase = await createClient()
+  const supabase = createClient()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const s: any = supabase
 
-  // Get current user's organization_id
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return []
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: profileList } = await (supabase.from('profiles') as any)
+  const { data: profileList } = await s
+    .from('profiles')
     .select('organization_id')
     .eq('id', user.id)
     .limit(1)
@@ -50,7 +52,8 @@ async function getReleasedSubtopics(topicId: string): Promise<SubtopicRow[]> {
   let teacherIds: string[] = []
   if (studentOrgId) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: teachersInOrg } = await (supabase.from('profiles') as any)
+    const { data: teachersInOrg } = await (s as any)
+      .from('profiles')
       .select('id')
       .eq('role', 'teacher')
       .eq('organization_id', studentOrgId)
@@ -59,13 +62,14 @@ async function getReleasedSubtopics(topicId: string): Promise<SubtopicRow[]> {
     teacherIds = ((teachersInOrg as any[]) || []).map((t: any) => t.id)
   }
 
-  // Get released subtopic IDs for this topic by teachers in same org
+  if (teacherIds.length === 0) return []
+
+  // Get released subtopic IDs for this topic
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: releasedData } = await (supabase.from('released_subtopics') as any)
-    .select(`
-      subtopic_id
-    `)
-    .filter('teacher_id', 'in', `(${teacherIds.map((id: string) => `"${id}"`).join(',')})`)
+  const { data: releasedData } = await (s as any)
+    .from('released_subtopics')
+    .select('subtopic_id')
+    .in('teacher_id', teacherIds)
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const releasedIds = new Set((releasedData as any[])?.map((r: any) => r.subtopic_id) || [])
@@ -74,7 +78,8 @@ async function getReleasedSubtopics(topicId: string): Promise<SubtopicRow[]> {
 
   // Get all subtopics for this topic that are in released set
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data } = await (supabase.from('subtopics') as any)
+  const { data } = await (s as any)
+    .from('subtopics')
     .select('*')
     .eq('topic_id', topicId)
     .in('id', Array.from(releasedIds))
@@ -84,33 +89,108 @@ async function getReleasedSubtopics(topicId: string): Promise<SubtopicRow[]> {
   return (data as any[]) || []
 }
 
-export default async function StudentTopicDetailPage({
+export default function StudentTopicDetailPage({
   params,
 }: {
   params: { topicId: string }
 }) {
-  const [topic, subtopics] = await Promise.all([
-    getTopic(params.topicId),
-    getReleasedSubtopics(params.topicId),
-  ])
+  const [topic, setTopic] = useState<TopicRow | null>(null)
+  const [subtopics, setSubtopics] = useState<SubtopicRow[]>([])
+  const [notFoundState, setNotFoundState] = useState(false)
+  const [loading, setLoading] = useState(true)
 
-  if (!topic) {
-    notFound()
+  async function load() {
+    const [t, subs] = await Promise.all([
+      getTopic(params.topicId),
+      getReleasedSubtopics(params.topicId),
+    ])
+    if (!t) {
+      setNotFoundState(true)
+      setLoading(false)
+      return
+    }
+    setTopic(t)
+    setSubtopics(subs)
+    setLoading(false)
+  }
+
+  useEffect(() => {
+    let cancelled = false
+    let interval: ReturnType<typeof setInterval> | null = null
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let channel: any = null
+
+    load()
+
+    // Polling fallback every 8s
+    interval = setInterval(() => { if (!cancelled) load() }, 8000)
+
+    // Supabase Realtime subscription
+    const supabase = createClient()
+    try {
+      channel = supabase
+        .channel('student-topic-detail-live')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'released_subtopics' },
+          () => { if (!cancelled) load() },
+        )
+        .subscribe()
+    } catch {
+      // Realtime unavailable — polling handles it
+    }
+
+    return () => {
+      cancelled = true
+      if (interval) clearInterval(interval)
+      if (channel) supabase.removeChannel(channel)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.topicId])
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="h-5 w-32 animate-pulse rounded bg-gray-200" />
+        <div className="h-8 w-64 animate-pulse rounded bg-gray-200" />
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-16 animate-pulse rounded-lg border bg-white p-4 shadow-sm" />
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  if (notFoundState || !topic) {
+    return (
+      <div className="rounded-lg border-2 border-dashed border-gray-300 p-12 text-center">
+        <h2 className="text-lg font-semibold text-gray-700">Topic not found</h2>
+      </div>
+    )
   }
 
   return (
     <div className="space-y-6">
-      <div>
-        <Link
-          href="/student/topics"
-          className="text-sm font-medium text-blue-600 hover:text-blue-800"
-        >
-          &larr; Back to Topics
-        </Link>
-        <h1 className="mt-2 text-2xl font-bold text-gray-900">{topic.title}</h1>
-        <p className="mt-1 text-sm text-gray-500">
-          Component J277/{topic.component} &middot; {subtopics.length} released subtopic{subtopics.length !== 1 ? 's' : ''}
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <Link
+            href="/student/topics"
+            className="text-sm font-medium text-blue-600 hover:text-blue-800"
+          >
+            &larr; Back to Topics
+          </Link>
+          <h1 className="mt-2 text-2xl font-bold text-gray-900">{topic.title}</h1>
+          <p className="mt-1 text-sm text-gray-500">
+            Component J277/{topic.component} &middot; {subtopics.length} released subtopic{subtopics.length !== 1 ? 's' : ''}
+          </p>
+        </div>
+        {subtopics.length > 0 && (
+          <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-3 py-1 text-xs font-medium text-green-700">
+            <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+            Live
+          </span>
+        )}
       </div>
 
       {subtopics.length > 0 ? (

@@ -1,5 +1,8 @@
-import { createClient } from '@/lib/supabase/server'
+'use client'
+
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { createClient } from '@/lib/supabase/client'
 
 type TopicSummary = {
   id: string
@@ -10,14 +13,15 @@ type TopicSummary = {
 }
 
 async function getReleasedTopics(): Promise<TopicSummary[]> {
-  const supabase = await createClient()
+  const supabase = createClient()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const s: any = supabase
 
-  // Get current user's organization_id
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return []
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: profileList } = await (supabase.from('profiles') as any)
+  const { data: profileList } = await s
+    .from('profiles')
     .select('organization_id')
     .eq('id', user.id)
     .limit(1)
@@ -29,8 +33,8 @@ async function getReleasedTopics(): Promise<TopicSummary[]> {
   // Find teachers in same organization
   let teacherIds: string[] = []
   if (studentOrgId) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: teachersInOrg } = await (supabase.from('profiles') as any)
+    const { data: teachersInOrg } = await s
+      .from('profiles')
       .select('id')
       .eq('role', 'teacher')
       .eq('organization_id', studentOrgId)
@@ -40,8 +44,8 @@ async function getReleasedTopics(): Promise<TopicSummary[]> {
   }
 
   // Get all released subtopics by teachers in this org
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let releasedQuery = (supabase.from('released_subtopics') as any)
+  let releasedQuery = s
+    .from('released_subtopics')
     .select(`
       subtopic_id,
       subtopics!inner (
@@ -59,7 +63,6 @@ async function getReleasedTopics(): Promise<TopicSummary[]> {
     releasedQuery = releasedQuery.in('teacher_id', teacherIds)
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: releasedData } = await releasedQuery
 
   if (!releasedData || releasedData.length === 0) return []
@@ -90,16 +93,80 @@ async function getReleasedTopics(): Promise<TopicSummary[]> {
   return Array.from(topicMap.values()).sort((a, b) => a.order_number - b.order_number)
 }
 
-export default async function StudentTopicsPage() {
-  const topics = await getReleasedTopics()
+export default function StudentTopicsPage() {
+  const [topics, setTopics] = useState<TopicSummary[]>([])
+  const [loading, setLoading] = useState(true)
+
+  async function load() {
+    const result = await getReleasedTopics()
+    setTopics(result)
+    setLoading(false)
+  }
+
+  useEffect(() => {
+    let cancelled = false
+    let interval: ReturnType<typeof setInterval> | null = null
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let channel: any = null
+
+    load()
+
+    // Polling fallback every 8s
+    interval = setInterval(() => {
+      if (!cancelled) load()
+    }, 8000)
+
+    // Supabase Realtime subscription
+    const supabase = createClient()
+    try {
+      channel = supabase
+        .channel('student-topics-live')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'released_subtopics' },
+          () => { if (!cancelled) load() },
+        )
+        .subscribe()
+    } catch {
+      // Realtime unavailable — polling handles it
+    }
+
+    return () => {
+      cancelled = true
+      if (interval) clearInterval(interval)
+      if (channel) supabase.removeChannel(channel)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl font-bold text-gray-900">My Topics</h1>
+        <div className="grid gap-6 md:grid-cols-2">
+          {[1, 2].map((i) => (
+            <div key={i} className="h-32 animate-pulse rounded-lg border bg-white p-6 shadow-sm" />
+          ))}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">My Topics</h1>
-        <p className="mt-1 text-gray-600">
-          Browse topics released by your teacher and start learning.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">My Topics</h1>
+          <p className="mt-1 text-gray-600">
+            Browse topics released by your teacher and start learning.
+          </p>
+        </div>
+        {topics.length > 0 && (
+          <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-3 py-1 text-xs font-medium text-green-700">
+            <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+            Live
+          </span>
+        )}
       </div>
 
       {topics.length > 0 ? (

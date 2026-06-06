@@ -1,6 +1,9 @@
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
+'use client'
+
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { createClient } from '@/lib/supabase/client'
 
 interface StudentData {
   id: string
@@ -25,6 +28,15 @@ interface StudentAnswerData {
   submitted_at: string
 }
 
+interface DashboardData {
+  teacherName: string
+  orgName: string
+  orgSlug: string
+  students: StudentData[]
+  questionSets: QuestionSetData[]
+  answers: StudentAnswerData[]
+}
+
 function getScoreColorClass(score: number, maxScore: number): string {
   if (maxScore === 0) return 'text-gray-500'
   const ratio = score / maxScore
@@ -41,81 +53,68 @@ function getScoreBgClass(score: number, maxScore: number): string {
   return 'bg-red-50 border-red-200'
 }
 
-export default async function TeacherDashboard() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) {
-    redirect('/auth/login')
-  }
-
-  // Get teacher's profile with organization_id
+async function fetchDashboardData(): Promise<DashboardData | null> {
+  const supabase = createClient()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: profileList } = await (supabase.from('profiles') as any)
+  const s: any = supabase
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+
+  // Get teacher profile
+  const { data: profileList } = await s
+    .from('profiles')
     .select('*')
     .eq('id', user.id)
     .limit(1)
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const typedProfile = (profileList as any[] | null)?.[0]
-  if (!typedProfile || typedProfile.role !== 'teacher') {
-    redirect('/student')
-  }
+  const typedProfile = profileList?.[0]
+  if (!typedProfile || typedProfile.role !== 'teacher') return null
 
   const teacherOrgId = typedProfile.organization_id
 
-  // Fetch organization details
+  // Org info
   let orgName = ''
   let orgSlug = ''
   if (teacherOrgId) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: orgData } = await (supabase.from('organizations') as any)
+    const { data: orgData } = await s
+      .from('organizations')
       .select('name, slug')
       .eq('id', teacherOrgId)
       .limit(1)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const org = (orgData as any[] | null)?.[0]
+    const org = orgData?.[0]
     if (org) {
       orgName = org.name
       orgSlug = org.slug
     }
   }
 
-  // Run independent queries in parallel using Promise.all
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let studentQuery = (supabase.from('profiles') as any)
+  // Students
+  let studentQuery = s
+    .from('profiles')
     .select('id, full_name')
     .eq('role', 'student')
     .order('full_name', { ascending: true })
   if (teacherOrgId) {
     studentQuery = studentQuery.eq('organization_id', teacherOrgId)
   }
+  const { data: studentList } = await studentQuery
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let teacherIdsQuery = (supabase.from('profiles') as any)
+  // Teacher IDs in org
+  let teacherIdsQuery = s
+    .from('profiles')
     .select('id')
     .eq('role', 'teacher')
   if (teacherOrgId) {
     teacherIdsQuery = teacherIdsQuery.eq('organization_id', teacherOrgId)
   }
+  const { data: teacherIdsResult } = await teacherIdsQuery
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const teacherIds = (teacherIdsResult || []).map((t: any) => t.id)
 
-  // Fetch students and teacher IDs in parallel
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [studentsResult, teacherIdsResult] = await Promise.all([
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    studentQuery as Promise<{ data: any[] | null }>,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    teacherIdsQuery as Promise<{ data: any[] | null }>,
-  ])
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const studentList = ((studentsResult?.data || []) as StudentData[]).filter(Boolean)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const teacherIds = ((teacherIdsResult?.data as any[]) || []).map((t: { id: string }) => t.id)
-
-  // Now fetch question sets using teacherIds
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let qsQuery = (supabase.from('question_sets') as any)
+  // Question sets
+  let qsQuery = s
+    .from('question_sets')
     .select(`
       *,
       subtopics!inner (
@@ -129,11 +128,8 @@ export default async function TeacherDashboard() {
   if (teacherIds.length > 0) {
     qsQuery = qsQuery.in('teacher_id', teacherIds)
   }
-
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: allSets } = await qsQuery
-
-  // Build question set list with subtopic titles
+  const { data: allSets } = await qsQuery as any
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const questionSets: QuestionSetData[] = (allSets || []).map((set: any) => ({
     id: set.id,
@@ -145,36 +141,119 @@ export default async function TeacherDashboard() {
     subtopic_topic_title: set.subtopics?.topics?.title || 'Unknown Topic',
   }))
 
-  // Fetch student answers only for this org's question sets
+  // Student answers
   const orgQuestionSetIds = questionSets.map((s) => s.id)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let answersQuery = (supabase.from('student_answers') as any)
+  let answersQuery = s
+    .from('student_answers')
     .select('id, question_set_id, student_id, total_score, submitted_at')
   if (orgQuestionSetIds.length > 0) {
     answersQuery = answersQuery.in('question_set_id', orgQuestionSetIds)
   } else {
-    // No question sets in this org — no answers to show
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     answersQuery = answersQuery.eq('id', '00000000-0000-0000-0000-000000000000')
   }
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: allAnswers } = await answersQuery
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const answerList = (allAnswers || []) as StudentAnswerData[]
+  return {
+    teacherName: typedProfile?.full_name || 'Teacher',
+    orgName,
+    orgSlug,
+    students: (studentList || []).filter(Boolean),
+    questionSets,
+    answers: (allAnswers || []) as StudentAnswerData[],
+  }
+}
 
-  // Build answer lookup: key = `${studentId}_${questionSetId}`
-  const answerMap = new Map<string, StudentAnswerData>()
-  for (const ans of answerList) {
-    const key = `${ans.student_id}_${ans.question_set_id}`
-    answerMap.set(key, ans)
+export default function TeacherDashboard() {
+  const router = useRouter()
+  const [data, setData] = useState<DashboardData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [unauthorized, setUnauthorized] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    let interval: ReturnType<typeof setInterval> | null = null
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let channel: any = null
+
+    async function load() {
+      const result = await fetchDashboardData()
+      if (cancelled) return
+      if (result === null) {
+        setUnauthorized(true)
+        setLoading(false)
+        return
+      }
+      setData(result)
+      setLoading(false)
+    }
+
+    load()
+
+    // Polling fallback every 8s
+    interval = setInterval(load, 8000)
+
+    // Supabase Realtime subscription
+    const supabase = createClient()
+    try {
+      channel = supabase
+        .channel('teacher-dashboard-live')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'profiles' },
+          () => { load() },
+        )
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'student_answers' },
+          () => { load() },
+        )
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'question_sets' },
+          () => { load() },
+        )
+        .subscribe()
+    } catch {
+      // Realtime unavailable — polling fallback handles it
+    }
+
+    return () => {
+      cancelled = true
+      if (interval) clearInterval(interval)
+      if (channel) {
+        supabase.removeChannel(channel)
+      }
+    }
+  }, [])
+
+  if (unauthorized) {
+    router.push('/auth/login')
+    return null
   }
 
-  // Calculate stats
-  const totalStudents = studentList.length
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-200 border-t-blue-600" />
+      </div>
+    )
+  }
+
+  if (!data) return null
+
+  const { teacherName, orgName, orgSlug, students, questionSets, answers } = data
+
+  // Build answer lookup
+  const answerMap = new Map<string, StudentAnswerData>()
+  for (const ans of answers) {
+    answerMap.set(`${ans.student_id}_${ans.question_set_id}`, ans)
+  }
+
+  // Stats
+  const totalStudents = students.length
   const totalQuestionSets = questionSets.length
-  const totalSubmissions = answerList.length
-  const submittedStudentIds = new Set(answerList.map((a) => a.student_id))
+  const totalSubmissions = answers.length
+  const submittedStudentIds = new Set(answers.map((a) => a.student_id))
   const activeStudents = submittedStudentIds.size
 
   return (
@@ -183,7 +262,7 @@ export default async function TeacherDashboard() {
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Teacher Dashboard</h1>
         <p className="mt-1 text-gray-600">
-          Welcome back, {typedProfile?.full_name || 'Teacher'}
+          Welcome back, {teacherName}
         </p>
         {orgName && orgSlug && (
           <div className="mt-3 rounded-lg border border-indigo-200 bg-indigo-50 p-4">
@@ -196,7 +275,7 @@ export default async function TeacherDashboard() {
         )}
       </div>
 
-      {/* Stats Cards */}
+      {/* Stats Cards — live updating */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-lg border bg-white p-5 shadow-sm">
           <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Students</p>
@@ -216,21 +295,27 @@ export default async function TeacherDashboard() {
         </div>
       </div>
 
-      {/* Students Table */}
+      {/* Students Table — live updating */}
       <div className="rounded-lg border bg-white shadow-sm">
-        <div className="border-b bg-gray-50 px-6 py-4">
-          <h2 className="text-lg font-semibold text-gray-900">Student Progress</h2>
-          <p className="mt-1 text-sm text-gray-500">
-            Overview of all students and their question set completion status.
-          </p>
+        <div className="border-b bg-gray-50 px-6 py-4 flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">Student Progress</h2>
+            <p className="mt-1 text-sm text-gray-500">
+              Overview of all students and their question set completion status.
+            </p>
+          </div>
+          <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-3 py-1 text-xs font-medium text-green-700">
+            <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+            Live
+          </span>
         </div>
 
-        {studentList.length === 0 || questionSets.length === 0 ? (
+        {students.length === 0 || questionSets.length === 0 ? (
           <div className="px-6 py-12 text-center">
             <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
             </svg>
-            {studentList.length === 0 ? (
+            {students.length === 0 ? (
               <>
                 <h3 className="mt-4 text-lg font-semibold text-gray-700">No students yet</h3>
                 <p className="mt-2 text-sm text-gray-500">
@@ -270,7 +355,7 @@ export default async function TeacherDashboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 bg-white">
-                {studentList.map((student) => (
+                {students.map((student) => (
                   <tr key={student.id} className="hover:bg-blue-50/50 transition-colors">
                     <td className="sticky left-0 bg-white px-6 py-4 whitespace-nowrap border-r border-gray-100">
                       <div className="flex items-center gap-3">

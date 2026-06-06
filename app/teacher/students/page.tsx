@@ -39,6 +39,30 @@ export default function ManageStudentsPage() {
 
   useEffect(() => {
     loadStudents()
+
+    // Polling fallback every 8s
+    const interval = setInterval(loadStudents, 8000)
+
+    // Supabase Realtime subscription
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let channel: any = null
+    try {
+      channel = supabase
+        .channel('teacher-students-live')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'profiles' },
+          () => { loadStudents() },
+        )
+        .subscribe()
+    } catch {
+      // Realtime unavailable — polling handles it
+    }
+
+    return () => {
+      clearInterval(interval)
+      if (channel) supabase.removeChannel(channel)
+    }
   }, [])
 
   async function loadStudents() {

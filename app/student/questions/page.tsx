@@ -1,5 +1,8 @@
-import { createClient } from '@/lib/supabase/server'
+'use client'
+
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { createClient } from '@/lib/supabase/client'
 
 interface QuestionSetInfo {
   id: string
@@ -18,13 +21,15 @@ interface QuestionSetInfo {
 }
 
 async function getStudentQuestionSets(): Promise<QuestionSetInfo[]> {
-  const supabase = await createClient()
+  const supabase = createClient()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const s: any = supabase
+
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return []
 
-  // Get student's organization_id
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: profileList } = await (supabase.from('profiles') as any)
+  const { data: profileList } = await s
+    .from('profiles')
     .select('organization_id')
     .eq('id', user.id)
     .limit(1)
@@ -36,8 +41,8 @@ async function getStudentQuestionSets(): Promise<QuestionSetInfo[]> {
   // Find teachers in same organization
   let teacherIds: string[] = []
   if (studentOrgId) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: teachersInOrg } = await (supabase.from('profiles') as any)
+    const { data: teachersInOrg } = await s
+      .from('profiles')
       .select('id')
       .eq('role', 'teacher')
       .eq('organization_id', studentOrgId)
@@ -47,8 +52,8 @@ async function getStudentQuestionSets(): Promise<QuestionSetInfo[]> {
   }
 
   // Build query for question sets
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let qsQuery = (supabase.from('question_sets') as any)
+  let qsQuery = s
+    .from('question_sets')
     .select(`
       *,
       subtopics!inner (
@@ -66,14 +71,13 @@ async function getStudentQuestionSets(): Promise<QuestionSetInfo[]> {
 
   qsQuery = qsQuery.eq('status', 'published')
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: allSets } = await qsQuery
 
   if (!allSets) return []
 
   // Get all student answers for this student
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: allAnswers } = await (supabase.from('student_answers') as any)
+  const { data: allAnswers } = await s
+    .from('student_answers')
     .select('id, question_set_id, total_score, submitted_at')
     .eq('student_id', user.id)
 
@@ -115,16 +119,83 @@ async function getStudentQuestionSets(): Promise<QuestionSetInfo[]> {
   return result
 }
 
-export default async function StudentQuestionsPage() {
-  const questionSets = await getStudentQuestionSets()
+export default function StudentQuestionsPage() {
+  const [questionSets, setQuestionSets] = useState<QuestionSetInfo[]>([])
+  const [loading, setLoading] = useState(true)
+
+  async function load() {
+    const result = await getStudentQuestionSets()
+    setQuestionSets(result)
+    setLoading(false)
+  }
+
+  useEffect(() => {
+    let cancelled = false
+    let interval: ReturnType<typeof setInterval> | null = null
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let channel: any = null
+
+    load()
+
+    // Polling fallback every 8s
+    interval = setInterval(() => { if (!cancelled) load() }, 8000)
+
+    // Supabase Realtime subscription
+    const supabase = createClient()
+    try {
+      channel = supabase
+        .channel('student-questions-live')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'question_sets' },
+          () => { if (!cancelled) load() },
+        )
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'student_answers' },
+          () => { if (!cancelled) load() },
+        )
+        .subscribe()
+    } catch {
+      // Realtime unavailable — polling handles it
+    }
+
+    return () => {
+      cancelled = true
+      if (interval) clearInterval(interval)
+      if (channel) supabase.removeChannel(channel)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl font-bold text-gray-900">Practice Questions</h1>
+        <div className="space-y-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-28 animate-pulse rounded-lg border bg-white p-6 shadow-sm" />
+          ))}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Practice Questions</h1>
-        <p className="mt-1 text-gray-600">
-          Question sets assigned by your teacher. Complete them to get AI-marked feedback.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Practice Questions</h1>
+          <p className="mt-1 text-gray-600">
+            Question sets assigned by your teacher. Complete them to get AI-marked feedback.
+          </p>
+        </div>
+        {questionSets.length > 0 && (
+          <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-3 py-1 text-xs font-medium text-green-700">
+            <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+            Live
+          </span>
+        )}
       </div>
 
       {questionSets.length > 0 ? (
