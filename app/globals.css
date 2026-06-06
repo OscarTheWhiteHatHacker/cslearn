@@ -16,8 +16,14 @@
 
 /* Dark mode overrides via class strategy */
 .dark {
-  --background: #0f172a;
-  --foreground: #e2e8f0;
+  --background: #1a1d23;
+  --foreground: #d1d5db;
+  --surface: #22262e;
+  --surface-elevated: #2a2f38;
+  --border: #333842;
+  --text-primary: #e5e7eb;
+  --text-secondary: #9ca3af;
+  --text-muted: #6b7280;
 }
 
 .dark body {
@@ -25,17 +31,23 @@
   color: var(--foreground);
 }
 
-/* Dark mode card and surface overrides */
-.dark .bg-white {
-  background-color: #1e293b;
+/* Dark mode surface hierarchy */
+.dark .bg-white,
+.dark .bg-card {
+  background-color: var(--surface);
 }
 
 .dark .bg-gray-50 {
-  background-color: #1e293b;
+  background-color: var(--background);
 }
 
-.dark .border-gray-200 {
-  border-color: #334155;
+.dark .bg-gray-100 {
+  background-color: var(--surface-elevated);
+}
+
+.dark .border-gray-200,
+.dark .border-gray-300 {
+  border-color: var(--border);
 }
 
 .dark .text-gray-900 {
