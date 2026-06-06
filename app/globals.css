@@ -3,27 +3,35 @@
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #fefce8;
+  --foreground: #1a1a1a;
+  --surface: #ffffff;
+  --surface-elevated: #fef9c3;
+  --border: #fde68a;
+  --text-primary: #1a1a1a;
+  --text-secondary: #525252;
+  --text-muted: #a3a3a3;
+  --accent: #ca8a04;
+  --accent-light: #eab308;
+  --accent-bg: #fef9c3;
+  --accent-hover: #a16207;
+  --logo-dark: #000000;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
-/* Dark mode overrides via class strategy */
 .dark {
-  --background: #1a1d23;
-  --foreground: #d1d5db;
-  --surface: #22262e;
-  --surface-elevated: #2a2f38;
-  --border: #333842;
+  --background: #1a1a1a;
+  --foreground: #e5e7eb;
+  --surface: #222222;
+  --surface-elevated: #2a2a2a;
+  --border: #3b3b3b;
   --text-primary: #e5e7eb;
   --text-secondary: #9ca3af;
   --text-muted: #6b7280;
+  --accent: #a855f7;
+  --accent-light: #c084fc;
+  --accent-bg: #2a1a3a;
+  --accent-hover: #9333ea;
+  --logo-dark: #a855f7;
 }
 
 .dark body {
@@ -31,7 +39,7 @@
   color: var(--foreground);
 }
 
-/* Dark mode surface hierarchy */
+/* Surface hierarchy */
 .dark .bg-white,
 .dark .bg-card {
   background-color: var(--surface);
@@ -51,23 +59,23 @@
 }
 
 .dark .text-gray-900 {
-  color: #f1f5f9;
+  color: var(--text-primary);
 }
 
 .dark .text-gray-700 {
-  color: #cbd5e1;
+  color: var(--text-secondary);
 }
 
 .dark .text-gray-600 {
-  color: #94a3b8;
+  color: var(--text-secondary);
 }
 
 .dark .text-gray-500 {
-  color: #64748b;
+  color: var(--text-muted);
 }
 
 .dark .shadow-sm {
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
 }
 
 body {
@@ -88,7 +96,6 @@ body {
   }
 }
 
-/* Class-based reduced-motion toggle for system preference */
 .reduce-motion *,
 .reduce-motion *::before,
 .reduce-motion *::after {
@@ -120,7 +127,7 @@ main {
   animation: fadeIn 0.2s ease-out;
 }
 
-/* Smooth theme transition on body and common elements */
+/* Smooth theme transition */
 html,
 body,
 *,
@@ -130,11 +137,7 @@ body,
 }
 
 @media (prefers-reduced-motion: reduce) {
-  html,
-  body,
-  *,
-  *::before,
-  *::after {
+  html, body, *, *::before, *::after {
     transition-duration: 0.01ms !important;
     transition-property: none !important;
   }
@@ -149,21 +152,20 @@ body,
   transition-property: none !important;
 }
 
-/* Focus-visible styles for keyboard accessibility */
+/* Focus-visible styles */
 @layer base {
-  /* Global focus-visible ring on all interactive elements */
   *:focus-visible {
-    @apply outline-none ring-2 ring-indigo-500 ring-offset-2;
+    @apply outline-none ring-2 ring-offset-2;
+    ring-color: var(--accent);
   }
 
-  /* Override for specific elements that may clash with custom focus styles */
   input:focus-visible,
   select:focus-visible,
   textarea:focus-visible {
-    @apply ring-2 ring-indigo-500 ring-offset-2;
+    @apply ring-2 ring-offset-2;
+    ring-color: var(--accent);
   }
 
-  /* Remove ring for mouse clicks while keeping keyboard focus visible */
   *:focus:not(:focus-visible) {
     @apply ring-0 ring-offset-0;
   }

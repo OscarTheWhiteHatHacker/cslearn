@@ -237,7 +237,7 @@ export default function SignupPage() {
           <p className="mt-4 text-gray-600">{successMessage}</p>
           <Link
             href="/auth/login"
-            className="mt-6 inline-block font-medium text-indigo-600 hover:text-indigo-500"
+            className="mt-6 inline-block font-medium text-accent hover:text-accent"
           >
             Go to login
           </Link>
@@ -265,7 +265,7 @@ export default function SignupPage() {
               <div
                 className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium ${
                   step === s
-                    ? 'bg-indigo-600 text-white'
+                    ? 'bg-accent text-white'
                     : step > s
                     ? 'bg-green-500 text-white'
                     : 'bg-gray-200 text-gray-500'
@@ -301,7 +301,7 @@ export default function SignupPage() {
                 <button
                   type="button"
                   onClick={() => handleRoleSelect('student')}
-                  className="w-full rounded-lg border border-gray-300 bg-white p-4 text-left transition-all hover:border-indigo-400 hover:bg-indigo-50/50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full rounded-lg border border-gray-300 bg-white p-4 text-left transition-all hover:border-accent hover:bg-accent-bg/50 focus:outline-none focus:ring-2 focus:ring-accent"
                 >
                   <div className="flex items-center gap-4">
                     <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100">
@@ -319,7 +319,7 @@ export default function SignupPage() {
                 <button
                   type="button"
                   onClick={() => handleRoleSelect('teacher')}
-                  className="w-full rounded-lg border border-gray-300 bg-white p-4 text-left transition-all hover:border-indigo-400 hover:bg-indigo-50/50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full rounded-lg border border-gray-300 bg-white p-4 text-left transition-all hover:border-accent hover:bg-accent-bg/50 focus:outline-none focus:ring-2 focus:ring-accent"
                 >
                   <div className="flex items-center gap-4">
                     <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100">
@@ -337,7 +337,7 @@ export default function SignupPage() {
                 <button
                   type="button"
                   onClick={() => handleRoleSelect('setup')}
-                  className="w-full rounded-lg border border-gray-300 bg-white p-4 text-left transition-all hover:border-indigo-400 hover:bg-indigo-50/50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full rounded-lg border border-gray-300 bg-white p-4 text-left transition-all hover:border-accent hover:bg-accent-bg/50 focus:outline-none focus:ring-2 focus:ring-accent"
                 >
                   <div className="flex items-center gap-4">
                     <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100">
@@ -375,7 +375,7 @@ export default function SignupPage() {
                       onClick={() => dispatch({ type: 'SET_SCHOOL_ACTION', action: 'create' })}
                       className={`flex-1 rounded-lg border p-3 text-center text-sm font-medium transition-all ${
                         schoolAction === 'create'
-                          ? 'border-indigo-600 bg-indigo-50 text-indigo-700'
+                          ? 'border-accent bg-accent-bg text-accent'
                           : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-50'
                       }`}
                     >
@@ -386,7 +386,7 @@ export default function SignupPage() {
                       onClick={() => dispatch({ type: 'SET_SCHOOL_ACTION', action: 'join' })}
                       className={`flex-1 rounded-lg border p-3 text-center text-sm font-medium transition-all ${
                         schoolAction === 'join'
-                          ? 'border-indigo-600 bg-indigo-50 text-indigo-700'
+                          ? 'border-accent bg-accent-bg text-accent'
                           : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-50'
                       }`}
                     >
@@ -405,7 +405,7 @@ export default function SignupPage() {
                         required
                         value={schoolName}
                         onChange={(e) => dispatch({ type: 'SET_SCHOOL_NAME', name: e.target.value })}
-                        className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm text-gray-900"
+                        className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-accent focus:outline-none focus:ring-accent sm:text-sm text-gray-900"
                         placeholder="e.g. Springfield High School"
                       />
                       {schoolName.trim() && (
@@ -425,7 +425,7 @@ export default function SignupPage() {
                         required
                         value={schoolSlug}
                         onChange={(e) => dispatch({ type: 'SET_SCHOOL_SLUG', slug: e.target.value })}
-                        className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm text-gray-900"
+                        className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-accent focus:outline-none focus:ring-accent sm:text-sm text-gray-900"
                         placeholder="e.g. springfield-high"
                       />
                       <p className="mt-1 text-xs text-gray-500">
@@ -445,7 +445,7 @@ export default function SignupPage() {
                     required
                     value={schoolSlug}
                     onChange={(e) => dispatch({ type: 'SET_SCHOOL_SLUG', slug: e.target.value })}
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm text-gray-900"
+                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-accent focus:outline-none focus:ring-accent sm:text-sm text-gray-900"
                     placeholder="e.g. springfield-high"
                   />
                   <p className="mt-1 text-xs text-gray-500">
@@ -560,7 +560,7 @@ export default function SignupPage() {
           {step === 1 && (
             <p className="text-center text-sm text-gray-600">
               Already have an account?{' '}
-              <Link href="/auth/login" className="font-medium text-indigo-600 hover:text-indigo-500">
+              <Link href="/auth/login" className="font-medium text-accent hover:text-accent">
                 Sign in
               </Link>
             </p>

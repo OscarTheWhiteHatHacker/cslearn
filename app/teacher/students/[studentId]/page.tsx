@@ -184,7 +184,7 @@ export default function StudentDetailPage({
         <p className="mt-2 text-sm text-gray-500">{errorState}</p>
         <button
           onClick={() => { setErrorState(null); setLoading(true); loadData() }}
-          className="mt-4 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors"
+          className="mt-4 rounded-md bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover transition-colors"
         >
           Try again
         </button>

@@ -350,7 +350,7 @@ export default function ManageStudentsPage() {
         <button
           type="button"
           onClick={() => { setShowAddForm(!showAddForm); setError(null); setSuccess(null) }}
-          className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors"
+          className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover transition-colors"
         >
           {showAddForm ? 'Cancel' : '+ Add Student'}
         </button>
@@ -376,7 +376,7 @@ export default function ManageStudentsPage() {
                 required
                 value={newUsername}
                 onChange={(e) => setNewUsername(e.target.value)}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm text-gray-900"
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-accent focus:outline-none focus:ring-accent sm:text-sm text-gray-900"
                 placeholder="e.g. johndoe"
               />
             </div>
@@ -388,7 +388,7 @@ export default function ManageStudentsPage() {
                 required
                 value={newFullName}
                 onChange={(e) => setNewFullName(e.target.value)}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm text-gray-900"
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-accent focus:outline-none focus:ring-accent sm:text-sm text-gray-900"
                 placeholder="John Doe"
               />
             </div>
@@ -401,7 +401,7 @@ export default function ManageStudentsPage() {
                 minLength={6}
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm text-gray-900"
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-accent focus:outline-none focus:ring-accent sm:text-sm text-gray-900"
                 placeholder="••••••••"
               />
             </div>
@@ -409,7 +409,7 @@ export default function ManageStudentsPage() {
               type="submit"
               loading={submitting}
               loadingText="Creating..."
-              className="bg-indigo-600 hover:bg-indigo-700"
+              className="bg-accent hover:bg-accent-hover"
             >
               Create Student
             </LoadingButton>
@@ -433,7 +433,7 @@ export default function ManageStudentsPage() {
             placeholder="Search students by name or username..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="block w-full rounded-md border border-gray-300 pl-10 pr-3 py-2 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
+            className="block w-full rounded-md border border-gray-300 pl-10 pr-3 py-2 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:border-accent focus:outline-none focus:ring-accent"
           />
         </div>
       )}
@@ -461,7 +461,7 @@ export default function ManageStudentsPage() {
               >
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-100 text-sm font-bold text-indigo-600">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent-bg text-sm font-bold text-accent">
                       {student.full_name.charAt(0).toUpperCase()}
                     </div>
                     <div>
@@ -471,7 +471,7 @@ export default function ManageStudentsPage() {
                             type="text"
                             value={editName}
                             onChange={(e) => setEditName(e.target.value)}
-                            className="rounded-md border border-gray-300 px-2 py-1 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
+                            className="rounded-md border border-gray-300 px-2 py-1 text-sm text-gray-900 focus:border-accent focus:outline-none focus:ring-accent"
                           />
                           <button
                             type="button"
@@ -501,7 +501,7 @@ export default function ManageStudentsPage() {
                     <button
                       type="button"
                       onClick={(e) => { e.preventDefault(); setEditingId(student.id); setEditName(student.full_name); setError(null); setSuccess(null) }}
-                      className="text-sm font-medium text-indigo-600 hover:text-indigo-900"
+                      className="text-sm font-medium text-accent hover:text-indigo-900"
                     >
                       Edit
                     </button>
@@ -529,7 +529,7 @@ export default function ManageStudentsPage() {
                       value={feedbackText[student.id] || ''}
                       onChange={(e) => handleFeedbackChange(student.id, e.target.value)}
                       rows={2}
-                      className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                      className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
                       placeholder="Write feedback for this student..."
                     />
                     <LoadingButton
@@ -537,7 +537,7 @@ export default function ManageStudentsPage() {
                       onClick={() => saveFeedback(student.id)}
                       loading={!!savingFeedback[student.id]}
                       loadingText="Saving..."
-                      className="self-start bg-indigo-600 hover:bg-indigo-700 px-3 py-2 text-xs whitespace-nowrap"
+                      className="self-start bg-accent hover:bg-accent-hover px-3 py-2 text-xs whitespace-nowrap"
                     >
                       {savingFeedback[student.id] ? 'Saving...' : 'Save'}
                     </LoadingButton>

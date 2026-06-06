@@ -12,6 +12,16 @@ const config: Config = {
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
+        accent: {
+          DEFAULT: "var(--accent)",
+          light: "var(--accent-light)",
+          bg: "var(--accent-bg)",
+          hover: "var(--accent-hover)",
+        },
+        surface: {
+          DEFAULT: "var(--surface)",
+          elevated: "var(--surface-elevated)",
+        },
       },
       borderRadius: {
         sm: "0.25rem",

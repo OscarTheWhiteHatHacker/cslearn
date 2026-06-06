@@ -16,7 +16,7 @@ const sizes = {
 export function Spinner({ size = 'md', className }: SpinnerProps) {
   return (
     <svg
-      className={cn('animate-spin text-indigo-600', sizes[size], className)}
+      className={cn('animate-spin text-accent', sizes[size], className)}
       xmlns="http://www.w3.org/2000/svg"
       fill="none"
       viewBox="0 0 24 24"

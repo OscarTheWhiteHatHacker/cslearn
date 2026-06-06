@@ -352,7 +352,7 @@ export default function AssignQuestionsButton({ subtopicId, lessonIndex }: Assig
                     value={q.question}
                     onChange={(e) => updateQuestion(i, 'question', e.target.value)}
                     rows={2}
-                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:ring-indigo-500"
+                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-accent focus:ring-accent"
                   />
                 </div>
 
@@ -365,7 +365,7 @@ export default function AssignQuestionsButton({ subtopicId, lessonIndex }: Assig
                       max={20}
                       value={q.marks}
                       onChange={(e) => updateQuestion(i, 'marks', parseInt(e.target.value) || 1)}
-                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:ring-indigo-500"
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-accent focus:ring-accent"
                     />
                   </div>
                 </div>
@@ -376,7 +376,7 @@ export default function AssignQuestionsButton({ subtopicId, lessonIndex }: Assig
                     value={q.mark_scheme}
                     onChange={(e) => updateQuestion(i, 'mark_scheme', e.target.value)}
                     rows={3}
-                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:ring-indigo-500"
+                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-accent focus:ring-accent"
                   />
                 </div>
               </div>

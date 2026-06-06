@@ -96,12 +96,12 @@ export default function TopicClient({ topicData }: any) {
                             onClick={() => selectLesson(subtopic.id, i)}
                             className={`w-full text-left flex items-center gap-4 rounded-lg border p-3 transition-all ${
                               isSelected
-                                ? 'border-indigo-300 bg-indigo-50'
+                                ? 'border-indigo-300 bg-accent-bg'
                                 : 'border-gray-100 bg-gray-50 hover:border-blue-200'
                             }`}
                           >
                             <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-                              isSelected ? 'bg-indigo-100 text-indigo-600' : 'bg-blue-50 text-blue-600'
+                              isSelected ? 'bg-accent-bg text-accent' : 'bg-blue-50 text-blue-600'
                             }`}>
                               {lesson.order_number}
                             </div>

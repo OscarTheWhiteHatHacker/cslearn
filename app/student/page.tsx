@@ -199,16 +199,16 @@ export default async function StudentDashboard() {
 
       {/* Teacher Feedback */}
       {profile?.teacher_feedback && (
-        <section className="rounded-lg border border-indigo-200 bg-indigo-50 p-5 shadow-sm dark:border-indigo-800 dark:bg-indigo-950">
+        <section className="rounded-lg border border-indigo-200 bg-accent-bg p-5 shadow-sm dark:border-indigo-800 dark:bg-indigo-950">
           <div className="flex items-start gap-3">
-            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-900">
-              <svg className="h-4 w-4 text-indigo-600 dark:text-indigo-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-accent-bg dark:bg-indigo-900">
+              <svg className="h-4 w-4 text-accent dark:text-indigo-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
               </svg>
             </div>
             <div className="flex-1">
               <h2 className="text-sm font-semibold text-indigo-900 dark:text-indigo-200">Feedback from your teacher</h2>
-              <p className="mt-1 text-sm text-indigo-800 whitespace-pre-wrap dark:text-indigo-300">{profile.teacher_feedback}</p>
+              <p className="mt-1 text-sm text-accent whitespace-pre-wrap dark:text-indigo-300">{profile.teacher_feedback}</p>
               {profile.feedback_updated_at && (
                 <p className="mt-1 text-xs text-indigo-500 dark:text-indigo-400">
                   Last updated: {formatDateTime(profile.feedback_updated_at)}

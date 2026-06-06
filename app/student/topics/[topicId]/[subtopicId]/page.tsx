@@ -229,7 +229,7 @@ export default async function StudentSubtopicPage({
               href={lessonSelectorUrl(i)}
               className={`px-4 py-2 text-sm font-medium rounded-t-lg border border-b-0 transition-colors ${
                 i === currentLessonIndex
-                  ? 'bg-white border-gray-200 text-indigo-700 -mb-px'
+                  ? 'bg-white border-gray-200 text-accent -mb-px'
                   : 'bg-gray-50 border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-100'
               }`}
             >

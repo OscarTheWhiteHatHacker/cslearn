@@ -4,10 +4,10 @@ import { ButtonHTMLAttributes, forwardRef } from 'react'
 import { cn } from '@/lib/utils'
 
 const variants = {
-  primary: 'bg-indigo-600 text-white hover:bg-indigo-700 focus:ring-indigo-500',
-  secondary: 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 focus:ring-indigo-500',
+  primary: 'bg-accent text-white hover:bg-accent-hover focus:ring-accent',
+  secondary: 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 focus:ring-accent',
   danger: 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500',
-  ghost: 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 focus:ring-indigo-500',
+  ghost: 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 focus:ring-accent',
   success: 'bg-green-600 text-white hover:bg-green-700 focus:ring-green-500',
 }
 

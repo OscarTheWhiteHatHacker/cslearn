@@ -314,10 +314,10 @@ export default function TeacherDashboard() {
           Welcome back, {teacherName}
         </p>
         {orgName && orgSlug && (
-          <div className="mt-3 rounded-lg border border-indigo-200 bg-indigo-50 p-4 dark:border-indigo-800 dark:bg-indigo-950">
+          <div className="mt-3 rounded-lg border border-indigo-200 bg-accent-bg p-4 dark:border-indigo-800 dark:bg-indigo-950">
             <p className="text-sm font-medium text-indigo-900 dark:text-indigo-200">{orgName}</p>
-            <p className="mt-1 text-sm text-indigo-700 dark:text-indigo-300">
-              School code: <code className="rounded bg-indigo-100 px-2 py-0.5 font-mono text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200">{orgSlug}</code>
+            <p className="mt-1 text-sm text-accent dark:text-indigo-300">
+              School code: <code className="rounded bg-accent-bg px-2 py-0.5 font-mono text-accent dark:bg-indigo-900 dark:text-indigo-200">{orgSlug}</code>
               <span className="ml-2 text-xs text-indigo-500 dark:text-indigo-400">— share this with your students to join</span>
             </p>
           </div>
@@ -477,7 +477,7 @@ export default function TeacherDashboard() {
                         onClick={() => setPage(i)}
                         className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
                           page === i
-                            ? 'bg-indigo-600 text-white'
+                            ? 'bg-accent text-white'
                             : 'border bg-white text-gray-700 hover:bg-gray-100 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600'
                         }`}
                       >

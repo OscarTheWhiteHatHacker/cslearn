@@ -9,7 +9,7 @@ const variants = {
   success: 'bg-green-100 text-green-800',
   warning: 'bg-amber-100 text-amber-800',
   danger: 'bg-red-100 text-red-800',
-  indigo: 'bg-indigo-100 text-indigo-800',
+  indigo: 'bg-accent-bg text-accent',
   purple: 'bg-purple-100 text-purple-800',
 }
 

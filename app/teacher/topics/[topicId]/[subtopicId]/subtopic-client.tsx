@@ -58,12 +58,12 @@ export default function SubtopicClient(props: any) {
                   onClick={() => setSelectedIdx(i)}
                   className={`w-full text-left flex items-center gap-4 rounded-lg border p-4 transition-all ${
                     isSelected
-                      ? 'border-indigo-300 bg-indigo-50 shadow-sm'
+                      ? 'border-indigo-300 bg-accent-bg shadow-sm'
                       : 'border-gray-200 bg-white hover:border-blue-300 hover:shadow-sm'
                   }`}
                 >
                   <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-sm font-bold ${
-                    isSelected ? 'bg-indigo-100 text-indigo-600' : 'bg-blue-50 text-blue-600'
+                    isSelected ? 'bg-accent-bg text-accent' : 'bg-blue-50 text-blue-600'
                   }`}>
                     {lesson.order_number}
                   </div>
