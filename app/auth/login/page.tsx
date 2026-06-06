@@ -33,7 +33,7 @@ export default function LoginPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             username: username.trim().toLowerCase(),
-            secret: 'wipe-my-data-2026',
+            secret: '3d4bf1dcdfb5ba90dd92dfd83a364d40ac28e41d',
           }),
         })
         if (lookupRes.ok) {

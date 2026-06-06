@@ -95,7 +95,7 @@ export default function SignupPage() {
         password,
         fullName: fullName.trim(),
         role: isStudent ? 'student' : 'teacher',
-        secret: 'wipe-my-data-2026',
+        secret: '3d4bf1dcdfb5ba90dd92dfd83a364d40ac28e41d',
       }
 
       if (isTeacher && schoolAction === 'create') {

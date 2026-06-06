@@ -97,7 +97,7 @@ export default function ManageStudentsPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          secret: 'wipe-my-data-2026',
+          secret: '3d4bf1dcdfb5ba90dd92dfd83a364d40ac28e41d',
           studentId,
           feedback: feedbackText[studentId] || '',
         }),
@@ -135,7 +135,7 @@ export default function ManageStudentsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'create',
-          secret: 'wipe-my-data-2026',
+          secret: '3d4bf1dcdfb5ba90dd92dfd83a364d40ac28e41d',
           orgId,
           username: newUsername.trim(),
           password: newPassword,
@@ -173,7 +173,7 @@ export default function ManageStudentsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'update',
-          secret: 'wipe-my-data-2026',
+          secret: '3d4bf1dcdfb5ba90dd92dfd83a364d40ac28e41d',
           studentId,
           fullName: editName.trim(),
         }),
@@ -211,7 +211,7 @@ export default function ManageStudentsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'delete',
-          secret: 'wipe-my-data-2026',
+          secret: '3d4bf1dcdfb5ba90dd92dfd83a364d40ac28e41d',
           studentId,
         }),
       })
