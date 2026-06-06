@@ -129,7 +129,7 @@ export default function LoginPage() {
           {/* Role selector - shown first */}
           {!role && (
             <div className="space-y-4">
-              <h2 className="text-lg font-semibold text-gray-900 bg-[var(--input-bg)] text-[var(--input-text)]">Who are you?</h2>
+              <h2 className="text-lg font-semibold text-gray-900">Who are you?</h2>
               <div className="space-y-3">
                 <button
                   type="button"
@@ -143,7 +143,7 @@ export default function LoginPage() {
                       </svg>
                     </div>
                     <div>
-                      <p className="font-medium text-gray-900 bg-[var(--input-bg)] text-[var(--input-text)]">I&apos;m a student</p>
+                      <p className="font-medium text-gray-900">I&apos;m a student</p>
                       <p className="text-sm text-gray-500">Sign in with your username</p>
                     </div>
                   </div>
@@ -161,7 +161,7 @@ export default function LoginPage() {
                       </svg>
                     </div>
                     <div>
-                      <p className="font-medium text-gray-900 bg-[var(--input-bg)] text-[var(--input-text)]">I&apos;m a teacher</p>
+                      <p className="font-medium text-gray-900">I&apos;m a teacher</p>
                       <p className="text-sm text-gray-500">Sign in with your email</p>
                     </div>
                   </div>

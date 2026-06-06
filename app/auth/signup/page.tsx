@@ -241,7 +241,7 @@ export default function SignupPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h1 className="mt-4 text-3xl font-bold text-gray-900 bg-[var(--input-bg)] text-[var(--input-text)]">Account created!</h1>
+          <h1 className="mt-4 text-3xl font-bold text-gray-900">Account created!</h1>
           <p className="mt-4 text-gray-600">{successMessage}</p>
           <Link
             href="/auth/login"
@@ -308,7 +308,7 @@ export default function SignupPage() {
           {/* Step 1: Role selection */}
           {step === 1 && (
             <div className="space-y-4">
-              <h2 className="text-lg font-semibold text-gray-900 bg-[var(--input-bg)] text-[var(--input-text)]">Who are you?</h2>
+              <h2 className="text-lg font-semibold text-gray-900">Who are you?</h2>
               <div className="space-y-3">
                 <button
                   type="button"
@@ -322,7 +322,7 @@ export default function SignupPage() {
                       </svg>
                     </div>
                     <div>
-                      <p className="font-medium text-gray-900 bg-[var(--input-bg)] text-[var(--input-text)]">I&apos;m a student</p>
+                      <p className="font-medium text-gray-900">I&apos;m a student</p>
                       <p className="text-sm text-gray-500">Join a school using your school code</p>
                     </div>
                   </div>
@@ -340,7 +340,7 @@ export default function SignupPage() {
                       </svg>
                     </div>
                     <div>
-                      <p className="font-medium text-gray-900 bg-[var(--input-bg)] text-[var(--input-text)]">I&apos;m a teacher at a school</p>
+                      <p className="font-medium text-gray-900">I&apos;m a teacher at a school</p>
                       <p className="text-sm text-gray-500">Join or create a school for your students</p>
                     </div>
                   </div>
@@ -358,7 +358,7 @@ export default function SignupPage() {
                       </svg>
                     </div>
                     <div>
-                      <p className="font-medium text-gray-900 bg-[var(--input-bg)] text-[var(--input-text)]">I&apos;m setting up a school</p>
+                      <p className="font-medium text-gray-900">I&apos;m setting up a school</p>
                       <p className="text-sm text-gray-500">Create a new school for teachers and students</p>
                     </div>
                   </div>
@@ -370,7 +370,7 @@ export default function SignupPage() {
           {/* Step 2: School info */}
           {step === 2 && (
             <div className="space-y-4">
-              <h2 className="text-lg font-semibold text-gray-900 bg-[var(--input-bg)] text-[var(--input-text)]">
+              <h2 className="text-lg font-semibold text-gray-900">
                 {isStudent ? 'Join your school' : 'School information'}
               </h2>
               <p className="text-sm text-gray-500">
@@ -487,7 +487,7 @@ export default function SignupPage() {
           {/* Step 3: Personal details */}
           {step === 3 && (
             <div className="space-y-4">
-              <h2 className="text-lg font-semibold text-gray-900 bg-[var(--input-bg)] text-[var(--input-text)]">Your details</h2>
+              <h2 className="text-lg font-semibold text-gray-900">Your details</h2>
 
               <Input
                 id="username"
