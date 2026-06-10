@@ -186,7 +186,12 @@ export default function TeacherDashboard() {
     abortRef.current = controller
 
     try {
-      const result = await fetchDashboardData(controller.signal)
+      const result = await Promise.race([
+        fetchDashboardData(controller.signal),
+        new Promise<null>((_, reject) =>
+          setTimeout(() => reject(new Error('Request timed out')), 15000)
+        ),
+      ])
       if (controller.signal.aborted) return
       if (result === null) {
         setUnauthorized(true)
