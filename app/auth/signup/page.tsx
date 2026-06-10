@@ -202,29 +202,37 @@ export default function SignupPage() {
         return
       }
 
-      // Sign in with the created account
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: result.email,
-        password,
-      })
-
-      if (!signInError) {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (user) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          await (supabase.from('profiles') as any)
-            .upsert({
-              id: user.id,
-              username: username.trim().toLowerCase(),
-              organization_id: result.organizationId || undefined,
-            }, { onConflict: 'id' })
+      // Account created — sign in and redirect
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let redirectPath = isStudent ? '/student' : '/teacher'
+      try {
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: result.email,
+          password,
+        })
+        if (!signInError) {
+          // Ensure profile exists before redirect
+          const { data: { user } } = await supabase.auth.getUser()
+          if (user) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            await (supabase.from('profiles') as any)
+              .upsert({
+                id: user.id,
+                username: username.trim().toLowerCase(),
+                organization_id: result.organizationId || undefined,
+              }, { onConflict: 'id' })
+          }
+          router.push(redirectPath)
+          router.refresh()
+          return
         }
-        router.push(isStudent ? '/student' : '/teacher')
-        router.refresh()
-        return
+      } catch {
+        // Sign-in failed — show success page instead
       }
 
+      // Fallback: show success + link to login page
       dispatch({ type: 'SET_SUCCESS', message: 'Account created successfully! You can now sign in.' })
+      dispatch({ type: 'SET_LOADING', loading: false })
     } catch (err) {
       dispatch({ type: 'SET_ERROR', error: err instanceof Error ? err.message : 'An unexpected error occurred' })
     } finally {
