@@ -203,8 +203,7 @@ export default function SignupPage() {
       }
 
       // Account created — sign in and redirect
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let redirectPath = isStudent ? '/student' : '/teacher'
+      const redirectPath = isStudent ? '/student' : '/teacher'
       try {
         const { error: signInError } = await supabase.auth.signInWithPassword({
           email: result.email,
