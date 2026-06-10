@@ -17,6 +17,11 @@ export async function middleware(request: NextRequest) {
     return supabaseResponse
   }
 
+  // Public API routes - no auth required
+  if (pathname.startsWith('/api/signup') || pathname.startsWith('/api/lookup-username')) {
+    return supabaseResponse
+  }
+
   // Protected routes - require authentication
   if (!user) {
     const redirectUrl = new URL('/auth/login', request.url)
