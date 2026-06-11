@@ -171,8 +171,27 @@ export default function ManageStudentsPage() {
   useEffect(() => {
     loadStudents()
 
+    // Supabase Realtime subscription
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let channel: any = null
+    try {
+      channel = supabase
+        .channel('teacher-students-live')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'profiles' },
+          () => { loadStudents() },
+        )
+        .subscribe()
+    } catch {
+      // Realtime unavailable — polling handles it
+    }
+
     return () => {
       if (abortRef.current) abortRef.current.abort()
+      if (channel) {
+        supabase.removeChannel(channel)
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadStudents])
