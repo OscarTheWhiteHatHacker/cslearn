@@ -573,13 +573,15 @@ export default function ManageStudentsPage() {
                     <textarea
                       value={feedbackText[student.id] || ''}
                       onChange={(e) => handleFeedbackChange(student.id, e.target.value)}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onClick={(e) => e.stopPropagation()}
                       rows={2}
                       className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
                       placeholder="Write feedback for this student..."
                     />
                     <LoadingButton
                       type="button"
-                      onClick={() => saveFeedback(student.id)}
+                      onClick={(e) => { e.stopPropagation(); saveFeedback(student.id) }}
                       loading={!!savingFeedback[student.id]}
                       loadingText="Saving..."
                       className="self-start bg-accent hover:bg-accent-hover px-3 py-2 text-xs whitespace-nowrap"
