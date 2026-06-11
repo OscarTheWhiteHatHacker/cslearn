@@ -109,7 +109,7 @@ async function fetchDashboardData(supabase: any, userId: string): Promise<Dashbo
   }))
 
   // Student answers (already fetched in parallel above)
-  const answers = ((allAnswers as any)?.data || []) as StudentAnswerData[]
+  const answers = ((allAnswers as Record<string, unknown>)?.data || []) as StudentAnswerData[]
   const students = (studentList || []).filter(Boolean) as StudentData[]
   const submittedStudentIds = new Set(answers.map((a) => a.student_id))
 
@@ -171,7 +171,7 @@ export default function TeacherDashboard() {
       setErrorState(msg)
       setLoading(false)
     }
-  }, [])
+  }, [supabase])
 
   const handleRetry = useCallback(() => {
     setErrorState(null)
