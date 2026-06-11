@@ -2,13 +2,12 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import ReleaseToggle from '@/components/release-toggle'
 import LessonReleaseToggle from '@/components/lesson-release-toggle'
 import AssignQuestionsButton from '@/components/assign-questions-button'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export default function SubtopicClient(props: any) {
-  const { subtopic, topic, lessons, subtopicReleased, releasedLessonIds } = props
+  const { subtopic, topic, lessons, releasedLessonIds } = props
   const releasedSet = new Set((releasedLessonIds as string[]) || [])
 
   const [selectedIdx, setSelectedIdx] = useState(0)
@@ -30,7 +29,6 @@ export default function SubtopicClient(props: any) {
           </div>
           <div className="flex items-center gap-3">
             <AssignQuestionsButton subtopicId={subtopic.id} lessonIndex={selectedIdx} />
-            <ReleaseToggle subtopicId={subtopic.id} initiallyReleased={subtopicReleased} />
           </div>
         </div>
       </div>
@@ -50,7 +48,7 @@ export default function SubtopicClient(props: any) {
           <div className="space-y-2">
             {lessons.map((lesson: { id: string; title: string; order_number: number }, i: number) => {
               const isSelected = i === selectedIdx
-              const isReleased = releasedSet.has(lesson.id) || subtopicReleased
+              const isReleased = releasedSet.has(lesson.id)
               return (
                 <button
                   type="button"

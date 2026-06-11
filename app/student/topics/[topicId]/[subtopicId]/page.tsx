@@ -145,18 +145,6 @@ export default async function StudentSubtopicPage({
     notFound()
   }
 
-  // Check subtopic-level release (legacy)
-  let subtopicReleased = false
-  if (user && teacherIds.length > 0) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: subRelease } = await (supabase.from('released_subtopics') as any)
-      .select('id')
-      .eq('subtopic_id', params.subtopicId)
-      .in('teacher_id', teacherIds)
-      .limit(1)
-    subtopicReleased = subRelease ? (subRelease as unknown[]).length > 0 : false
-  }
-
   // Get released lesson IDs
   const releasedLessonIds = new Set<string>()
   if (user && teacherIds.length > 0) {
@@ -180,13 +168,13 @@ export default async function StudentSubtopicPage({
   const allLessons = (dbLessons || []) as Lesson[]
 
   // Filter to only released lessons
-  // If no teachers found (RLP prevents cross-profile reads), show all lessons
-  const lessons = (subtopicReleased || teacherIds.length === 0)
+  // Show all lessons only if no teachers found (RLS prevents cross-profile reads)
+  const lessons = teacherIds.length === 0
     ? allLessons
     : allLessons.filter((l) => releasedLessonIds.has(l.id))
 
-  // If no lessons are released and subtopic isn't released either, redirect
-  if (lessons.length === 0 && !subtopicReleased) {
+  // If no lessons are released, redirect
+  if (lessons.length === 0) {
     redirect(`/student/topics/${params.topicId}`)
   }
 

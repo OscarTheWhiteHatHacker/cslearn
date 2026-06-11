@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import ReleaseToggle from '@/components/release-toggle'
 import LessonReleaseToggle from '@/components/lesson-release-toggle'
 import AssignQuestionsButton from '@/components/assign-questions-button'
 import { EmptyState } from '@/components/EmptyState'
@@ -72,7 +71,6 @@ export default function TopicClient({ topicData }: any) {
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <ReleaseToggle subtopicId={subtopic.id} initiallyReleased={false} />
                   <svg className={`h-5 w-5 text-gray-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
