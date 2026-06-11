@@ -186,7 +186,12 @@ export default function TeacherDashboard() {
     abortRef.current = controller
 
     try {
-      const result = await fetchDashboardData(controller.signal)
+      const result = await Promise.race([
+        fetchDashboardData(controller.signal),
+        new Promise<null>((_, reject) =>
+          setTimeout(() => reject(new Error('Dashboard data fetch timed out after 30s')), 30000)
+        ),
+      ])
       if (controller.signal.aborted) return
       if (result === null) {
         setUnauthorized(true)
@@ -198,7 +203,9 @@ export default function TeacherDashboard() {
       setLoading(false)
     } catch (err) {
       if (controller.signal.aborted) return
-      setErrorState(err instanceof Error ? err.message : 'Failed to load dashboard data')
+      const msg = err instanceof Error ? err.message : 'Failed to load dashboard data'
+      console.error('[Dashboard] fetch error:', err)
+      setErrorState(msg)
       setLoading(false)
     }
   }, [])
