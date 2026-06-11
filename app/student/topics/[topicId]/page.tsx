@@ -67,11 +67,13 @@ async function getReleasedSubtopics(topicId: string): Promise<SubtopicRow[]> {
   if (teacherIds.length === 0) {
     // No teachers found (RLS prevents students seeing other profiles).
     // Show all subtopics directly — they're publicly readable.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: allSubs } = await (s as any)
       .from('subtopics')
       .select('*')
       .eq('topic_id', topicId)
       .order('order_number', { ascending: true })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return (allSubs as any[]) || []
   }
 
