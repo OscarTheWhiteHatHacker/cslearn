@@ -49,18 +49,15 @@ interface DashboardData {
 const STUDENTS_PER_PAGE = 10
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function fetchDashboardData(supabase: any): Promise<DashboardData | null> {
+async function fetchDashboardData(supabase: any, userId: string): Promise<DashboardData | null> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const s: any = supabase
-
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
 
   // Get teacher profile
   const { data: profileList } = await s
     .from('profiles')
     .select('*')
-    .eq('id', user.id)
+    .eq('id', userId)
     .limit(1)
 
   const typedProfile = profileList?.[0]
@@ -187,12 +184,15 @@ export default function TeacherDashboard() {
     abortRef.current = controller
 
     try {
-      const result = await Promise.race([
-        fetchDashboardData(supabase),
-        new Promise<null>((_, reject) =>
-          setTimeout(() => reject(new Error('Dashboard data fetch timed out after 30s')), 30000)
-        ),
-      ])
+      const { user } = supabase.auth
+        ? await supabase.auth.getUser().then(r => r.data)
+        : null
+      if (!user) {
+        setUnauthorized(true)
+        setLoading(false)
+        return
+      }
+      const result = await fetchDashboardData(supabase, user.id)
       if (controller.signal.aborted) return
       if (result === null) {
         setUnauthorized(true)
