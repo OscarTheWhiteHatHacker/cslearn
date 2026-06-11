@@ -47,9 +47,7 @@ interface DashboardData {
 
 const STUDENTS_PER_PAGE = 10
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-async function fetchDashboardData(signal?: AbortSignal): Promise<DashboardData | null> {
-  const supabase = createClient()
+async function fetchDashboardData(supabase: ReturnType<typeof createClient>, signal?: AbortSignal): Promise<DashboardData | null> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const s: any = supabase
 
@@ -186,8 +184,9 @@ export default function TeacherDashboard() {
     abortRef.current = controller
 
     try {
+      const supabase = createClient()
       const result = await Promise.race([
-        fetchDashboardData(controller.signal),
+        fetchDashboardData(supabase, controller.signal),
         new Promise<null>((_, reject) =>
           setTimeout(() => reject(new Error('Dashboard data fetch timed out after 30s')), 30000)
         ),
