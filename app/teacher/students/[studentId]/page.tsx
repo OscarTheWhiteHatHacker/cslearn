@@ -139,13 +139,11 @@ export default function StudentDetailPage({
 
   // Add live updates
   useEffect(() => {
-    let interval: ReturnType<typeof setInterval> | null = null
+    const interval: ReturnType<typeof setInterval> | null = null
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let channel: any = null
 
     // Polling fallback every 8s
-    interval = setInterval(loadData, 8000)
-
     // Supabase Realtime subscription
     try {
       channel = supabase

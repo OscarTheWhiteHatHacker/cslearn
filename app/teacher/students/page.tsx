@@ -171,9 +171,6 @@ export default function ManageStudentsPage() {
   useEffect(() => {
     loadStudents()
 
-    // Polling fallback every 8s
-    const interval = setInterval(loadStudents, 8000)
-
     // Supabase Realtime subscription
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let channel: any = null
@@ -192,8 +189,9 @@ export default function ManageStudentsPage() {
 
     return () => {
       if (abortRef.current) abortRef.current.abort()
-      clearInterval(interval)
-      if (channel) supabase.removeChannel(channel)
+      if (channel) {
+        supabase.removeChannel(channel)
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadStudents])

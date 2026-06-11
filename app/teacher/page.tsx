@@ -217,9 +217,6 @@ export default function TeacherDashboard() {
   useEffect(() => {
     load()
 
-    // Polling fallback every 8s
-    const interval = setInterval(load, 8000)
-
     // Supabase Realtime subscription
     const supabase = createClient()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -249,7 +246,6 @@ export default function TeacherDashboard() {
 
     return () => {
       if (abortRef.current) abortRef.current.abort()
-      clearInterval(interval)
       if (channel) {
         supabase.removeChannel(channel)
       }
