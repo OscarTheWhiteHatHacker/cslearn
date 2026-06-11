@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
+import { requireTeacher, csrfProtection } from '@/lib/api-helpers'
 import { z } from 'zod'
 
 const resetSchema = z.object({
@@ -15,43 +16,19 @@ const resetSchema = z.object({
 
 export async function POST(request: Request) {
   try {
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-    if (!serviceKey) {
-      return NextResponse.json({ error: 'Service role key not configured' }, { status: 500 })
-    }
+    // CSRF protection
+    const csrfError = csrfProtection(request)
+    if (csrfError) return csrfError
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-    const supabase = createServerClient(supabaseUrl, serviceKey, {
-      cookies: { getAll: () => [], setAll: () => {} },
-    })
-
-    // Verify the requester is authenticated as a teacher
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    const authHeader = request.headers.get('Authorization')?.replace('Bearer ', '')
-    // Use auth header from request if provided (client sends its session token)
-    let teacherUser = user
-    if (!teacherUser && authHeader) {
-      const { data: { user: headerUser } } = await supabase.auth.getUser(authHeader)
-      teacherUser = headerUser
-    }
-
-    if (authError || !teacherUser) {
-      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
-    }
-
-    // Get teacher's profile to check role and organization
-    const { data: teacherProfile } = await supabase
-      .from('profiles')
-      .select('role, organization_id')
-      .eq('id', teacherUser.id)
-      .single()
-
-    if (!teacherProfile || teacherProfile.role !== 'teacher') {
-      return NextResponse.json({ error: 'Only teachers can reset passwords' }, { status: 403 })
-    }
+    // Verify teacher session — uses anon-key client with proper cookies
+    const { user, teacherProfile, errorResponse } = await requireTeacher()
+    if (errorResponse) return errorResponse
 
     if (!teacherProfile.organization_id) {
-      return NextResponse.json({ error: 'You must belong to a school to manage students' }, { status: 403 })
+      return NextResponse.json(
+        { error: 'You must belong to a school to manage students' },
+        { status: 403 },
+      )
     }
 
     // Parse and validate request body
@@ -66,8 +43,19 @@ export async function POST(request: Request) {
 
     const { studentId, newPassword } = validation.data
 
+    // Create service-role client for admin operations
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    if (!serviceKey) {
+      return NextResponse.json({ error: 'Service role key not configured' }, { status: 500 })
+    }
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+    const adminSupabase = createServerClient(supabaseUrl, serviceKey, {
+      cookies: { getAll: () => [], setAll: () => {} },
+    })
+
     // Verify the student belongs to the same organization
-    const { data: studentProfile } = await supabase
+    const { data: studentProfile } = await adminSupabase
       .from('profiles')
       .select('id, organization_id, full_name, username')
       .eq('id', studentId)
@@ -78,11 +66,14 @@ export async function POST(request: Request) {
     }
 
     if (studentProfile.organization_id !== teacherProfile.organization_id) {
-      return NextResponse.json({ error: 'Student does not belong to your school' }, { status: 403 })
+      return NextResponse.json(
+        { error: 'Student does not belong to your school' },
+        { status: 403 },
+      )
     }
 
     // Reset the password using admin API
-    const { error: updateError } = await supabase.auth.admin.updateUserById(
+    const { error: updateError } = await adminSupabase.auth.admin.updateUserById(
       studentId,
       { password: newPassword },
     )

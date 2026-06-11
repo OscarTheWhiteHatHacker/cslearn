@@ -489,13 +489,16 @@ export default function ManageStudentsPage() {
         ) : (
           <div className="divide-y divide-gray-200">
             {filteredStudents.map((student) => (
-              <Link
+              <div
                 key={student.id}
-                href={`/teacher/students/${student.id}`}
                 className="block px-6 py-4 transition-all hover:bg-gray-900 dark:hover:bg-gray-700"
               >
                 <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => router.push(`/teacher/students/${student.id}`)}
+                    className="flex items-center gap-3 text-left hover:opacity-80"
+                  >
                     <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent-bg text-sm font-bold text-accent">
                       {student.full_name.charAt(0).toUpperCase()}
                     </div>
@@ -531,7 +534,7 @@ export default function ManageStudentsPage() {
                         </>
                       )}
                     </div>
-                  </div>
+                  </button>
                   <div className="flex items-center gap-3">
                     <button
                       type="button"
@@ -565,7 +568,7 @@ export default function ManageStudentsPage() {
                 </div>
 
                 {/* Teacher Feedback */}
-                <div className="mt-3 ml-13 pl-13" onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
+                <div className="mt-3 ml-13 pl-13">
                   <label className="block text-xs font-medium text-gray-500 mb-1">
                     Teacher Feedback (visible to student)
                   </label>
@@ -573,15 +576,13 @@ export default function ManageStudentsPage() {
                     <textarea
                       value={feedbackText[student.id] || ''}
                       onChange={(e) => handleFeedbackChange(student.id, e.target.value)}
-                      onMouseDown={(e) => e.stopPropagation()}
-                      onClick={(e) => e.stopPropagation()}
                       rows={2}
                       className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
                       placeholder="Write feedback for this student..."
                     />
                     <LoadingButton
                       type="button"
-                      onClick={(e) => { e.stopPropagation(); saveFeedback(student.id) }}
+                      onClick={() => saveFeedback(student.id)}
                       loading={!!savingFeedback[student.id]}
                       loadingText="Saving..."
                       className="self-start bg-accent hover:bg-accent-hover px-3 py-2 text-xs whitespace-nowrap"
@@ -595,7 +596,7 @@ export default function ManageStudentsPage() {
                     </p>
                   )}
                 </div>
-              </Link>
+              </div>
             ))}
           </div>
         )}
