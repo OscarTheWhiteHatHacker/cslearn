@@ -83,7 +83,7 @@ async function fetchDashboardData(supabase: any, userId: string): Promise<Dashbo
   }
 
   const studentList = studentsResult.data
-  const teacherIds = (teacherIdsResult.data || []).map((t: any) => t.id)
+  const teacherIds = (teacherIdsResult.data || []).map((t: Record<string, string>) => t.id)
 
   // Question sets + answers in parallel
   let qsFilter = s.from('question_sets')
@@ -93,7 +93,7 @@ async function fetchDashboardData(supabase: any, userId: string): Promise<Dashbo
     qsFilter = qsFilter.in('teacher_id', teacherIds)
   }
   const [allSets, allAnswers] = await Promise.all([
-    qsFilter as any,
+    qsFilter as unknown as Promise<{ data: unknown }>,
     s.from('student_answers').select('id, question_set_id, student_id, total_score, submitted_at'),
   ])
 
