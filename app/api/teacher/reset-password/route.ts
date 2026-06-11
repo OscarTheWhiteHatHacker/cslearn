@@ -21,7 +21,7 @@ export async function POST(request: Request) {
     if (csrfError) return csrfError
 
     // Verify teacher session — uses anon-key client with proper cookies
-    const { user: _user, teacherProfile, errorResponse } = await requireTeacher()
+    const { teacherProfile, errorResponse } = await requireTeacher()
     if (errorResponse) return errorResponse
 
     if (!teacherProfile.organization_id) {
