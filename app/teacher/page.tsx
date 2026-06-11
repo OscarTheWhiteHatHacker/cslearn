@@ -184,9 +184,7 @@ export default function TeacherDashboard() {
     abortRef.current = controller
 
     try {
-      const { user } = supabase.auth
-        ? await supabase.auth.getUser().then(r => r.data)
-        : null
+      const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         setUnauthorized(true)
         setLoading(false)
