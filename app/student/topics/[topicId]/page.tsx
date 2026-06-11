@@ -64,14 +64,27 @@ async function getReleasedSubtopics(topicId: string): Promise<SubtopicRow[]> {
     teacherIds = ((teachersInOrg as any[]) || []).map((t: any) => t.id)
   }
 
-  if (teacherIds.length === 0) return []
+  if (teacherIds.length === 0) {
+    // No teachers found (RLS prevents students seeing other profiles).
+    // Show all subtopics directly — they're publicly readable.
+    const { data: allSubs } = await (s as any)
+      .from('subtopics')
+      .select('*')
+      .eq('topic_id', topicId)
+      .order('order_number', { ascending: true })
+    return (allSubs as any[]) || []
+  }
 
   // Get released subtopic IDs for this topic
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: releasedData } = await (s as any)
+  let relQuery = (s as any)
     .from('released_subtopics')
     .select('subtopic_id')
-    .in('teacher_id', teacherIds)
+
+  if (teacherIds.length > 0) {
+    relQuery = relQuery.in('teacher_id', teacherIds)
+  }
+
+  const { data: releasedData } = await relQuery
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const releasedIds = new Set((releasedData as any[])?.map((r: any) => r.subtopic_id) || [])

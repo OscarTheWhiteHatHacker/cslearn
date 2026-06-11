@@ -180,7 +180,8 @@ export default async function StudentSubtopicPage({
   const allLessons = (dbLessons || []) as Lesson[]
 
   // Filter to only released lessons
-  const lessons = subtopicReleased
+  // If no teachers found (RLP prevents cross-profile reads), show all lessons
+  const lessons = (subtopicReleased || teacherIds.length === 0)
     ? allLessons
     : allLessons.filter((l) => releasedLessonIds.has(l.id))
 

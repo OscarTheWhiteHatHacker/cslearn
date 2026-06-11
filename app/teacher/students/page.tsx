@@ -492,7 +492,7 @@ export default function ManageStudentsPage() {
               <Link
                 key={student.id}
                 href={`/teacher/students/${student.id}`}
-                className="block px-6 py-4 transition-all hover:bg-gray-50"
+                className="block px-6 py-4 transition-all hover:bg-gray-900 dark:hover:bg-gray-700"
               >
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-3">
@@ -565,7 +565,7 @@ export default function ManageStudentsPage() {
                 </div>
 
                 {/* Teacher Feedback */}
-                <div className="mt-3 ml-13 pl-13">
+                <div className="mt-3 ml-13 pl-13" onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
                   <label className="block text-xs font-medium text-gray-500 mb-1">
                     Teacher Feedback (visible to student)
                   </label>
