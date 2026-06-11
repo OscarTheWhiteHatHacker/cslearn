@@ -121,7 +121,8 @@ export default function ManageStudentsPage() {
     const controller = new AbortController()
     abortRef.current = controller
 
-    setPageLoading(true)
+    const initialLoad = pageLoading
+    if (initialLoad) setPageLoading(true)
     setError(null)
 
     const { data: { user } } = await supabase.auth.getUser()
