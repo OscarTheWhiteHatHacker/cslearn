@@ -54,18 +54,19 @@ async function fetchDashboardData(supabase: any, userId: string): Promise<Dashbo
   const s: any = supabase
 
   // Get teacher profile
-  const { data: profileList } = await s
-    .from('profiles')
-    .select('*')
-    .eq('id', userId)
-    .limit(1)
+  const [profileResult, studentsResult, teacherIdsResult] = await Promise.all([
+    s.from('profiles').select('*').eq('id', userId).limit(1),
+    s.from('profiles').select('id, full_name').eq('role', 'student').order('full_name', { ascending: true }),
+    s.from('profiles').select('id').eq('role', 'teacher'),
+  ])
 
+  const profileList = profileResult.data
   const typedProfile = profileList?.[0]
   if (!typedProfile || typedProfile.role !== 'teacher') return null
 
   const teacherOrgId = typedProfile.organization_id
 
-  // Org info
+  // Org info (if org exists)
   let orgName = ''
   let orgSlug = ''
   if (teacherOrgId) {
@@ -81,49 +82,23 @@ async function fetchDashboardData(supabase: any, userId: string): Promise<Dashbo
     }
   }
 
-  // Students
-  let studentQuery = s
-    .from('profiles')
-    .select('id, full_name')
-    .eq('role', 'student')
-    .order('full_name', { ascending: true })
-  if (teacherOrgId) {
-    studentQuery = studentQuery.eq('organization_id', teacherOrgId)
-  }
-  const { data: studentList } = await studentQuery
+  const studentList = studentsResult.data
+  const teacherIds = (teacherIdsResult.data || []).map((t: any) => t.id)
 
-  // Teacher IDs in org
-  let teacherIdsQuery = s
-    .from('profiles')
-    .select('id')
-    .eq('role', 'teacher')
-  if (teacherOrgId) {
-    teacherIdsQuery = teacherIdsQuery.eq('organization_id', teacherOrgId)
-  }
-  const { data: teacherIdsResult } = await teacherIdsQuery
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const teacherIds = (teacherIdsResult || []).map((t: any) => t.id)
-
-  // Question sets
-  let qsQuery = s
-    .from('question_sets')
-    .select(`
-      *,
-      subtopics!inner (
-        title,
-        topics!inner (
-          title
-        )
-      )
-    `)
+  // Question sets + answers in parallel
+  let qsFilter = s.from('question_sets')
+    .select('*, subtopics!inner(title, topics!inner(title))')
     .order('created_at', { ascending: false })
   if (teacherIds.length > 0) {
-    qsQuery = qsQuery.in('teacher_id', teacherIds)
+    qsFilter = qsFilter.in('teacher_id', teacherIds)
   }
+  const [allSets, allAnswers] = await Promise.all([
+    qsFilter as any,
+    s.from('student_answers').select('id, question_set_id, student_id, total_score, submitted_at'),
+  ])
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: allSets } = await qsQuery as any
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const questionSets: QuestionSetData[] = (allSets || []).map((set: any) => ({
+  const questionSets: QuestionSetData[] = ((allSets as any)?.data || []).map((set: any) => ({
     id: set.id,
     subtopic_id: set.subtopic_id,
     teacher_id: set.teacher_id,
@@ -133,20 +108,9 @@ async function fetchDashboardData(supabase: any, userId: string): Promise<Dashbo
     subtopic_topic_title: set.subtopics?.topics?.title || 'Unknown Topic',
   }))
 
-  // Student answers
-  const orgQuestionSetIds = questionSets.map((s) => s.id)
-  let answersQuery = s
-    .from('student_answers')
-    .select('id, question_set_id, student_id, total_score, submitted_at')
-  if (orgQuestionSetIds.length > 0) {
-    answersQuery = answersQuery.in('question_set_id', orgQuestionSetIds)
-  } else {
-    answersQuery = answersQuery.eq('id', '00000000-0000-0000-0000-000000000000')
-  }
-  const { data: allAnswers } = await answersQuery
-
+  // Student answers (already fetched in parallel above)
+  const answers = ((allAnswers as any)?.data || []) as StudentAnswerData[]
   const students = (studentList || []).filter(Boolean) as StudentData[]
-  const answers = (allAnswers || []) as StudentAnswerData[]
   const submittedStudentIds = new Set(answers.map((a) => a.student_id))
 
   return {
