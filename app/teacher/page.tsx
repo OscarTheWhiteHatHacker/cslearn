@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/client'
+import { useSupabase } from '@/components/supabase-provider'
 import { SkeletonDashboard } from '@/components/Skeleton'
 import { formatDate, getScoreColorClass, getScoreBgClass } from '@/lib/formatters'
 import { Button } from '@/components/ui/Button'
@@ -167,6 +167,7 @@ async function fetchDashboardData(supabase: ReturnType<typeof createClient>): Pr
 
 export default function TeacherDashboard() {
   const router = useRouter()
+  const { supabase } = useSupabase()
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [errorState, setErrorState] = useState<string | null>(null)
@@ -184,7 +185,6 @@ export default function TeacherDashboard() {
     abortRef.current = controller
 
     try {
-      const supabase = createClient()
       const result = await Promise.race([
         fetchDashboardData(supabase),
         new Promise<null>((_, reject) =>
@@ -219,7 +219,6 @@ export default function TeacherDashboard() {
     load()
 
     // Supabase Realtime subscription
-    const supabase = createClient()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let channel: any = null
     try {
