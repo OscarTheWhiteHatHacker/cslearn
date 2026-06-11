@@ -182,37 +182,8 @@ export default function TeacherDashboard() {
     if (authLoading) return
     load()
 
-    // Supabase Realtime subscription
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let channel: any = null
-    try {
-      channel = supabase
-        .channel('teacher-dashboard-live')
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'profiles' },
-          () => { load() },
-        )
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'student_answers' },
-          () => { load() },
-        )
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'question_sets' },
-          () => { load() },
-        )
-        .subscribe()
-    } catch {
-      // Realtime unavailable — polling fallback handles it
-    }
-
     return () => {
       if (abortRef.current) abortRef.current.abort()
-      if (channel) {
-        supabase.removeChannel(channel)
-      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [load, authLoading])
