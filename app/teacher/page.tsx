@@ -47,7 +47,7 @@ interface DashboardData {
 
 const STUDENTS_PER_PAGE = 10
 
-async function fetchDashboardData(supabase: ReturnType<typeof createClient>, signal?: AbortSignal): Promise<DashboardData | null> {
+async function fetchDashboardData(supabase: ReturnType<typeof createClient>, _signal?: AbortSignal): Promise<DashboardData | null> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const s: any = supabase
 
