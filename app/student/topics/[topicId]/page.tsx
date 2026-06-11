@@ -40,68 +40,12 @@ async function getReleasedSubtopics(topicId: string): Promise<SubtopicRow[]> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return []
 
-  const { data: profileList } = await s
-    .from('profiles')
-    .select('organization_id')
-    .eq('id', user.id)
-    .limit(1)
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const studentProfile = (profileList as any[] | null)?.[0]
-  const studentOrgId = studentProfile?.organization_id
-
-  // Find teachers in same organization
-  let teacherIds: string[] = []
-  if (studentOrgId) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: teachersInOrg } = await (s as any)
-      .from('profiles')
-      .select('id')
-      .eq('role', 'teacher')
-      .eq('organization_id', studentOrgId)
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    teacherIds = ((teachersInOrg as any[]) || []).map((t: any) => t.id)
-  }
-
-  if (teacherIds.length === 0) {
-    // No teachers found (RLS prevents students seeing other profiles).
-    // Show all subtopics directly — they're publicly readable.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: allSubs } = await (s as any)
-      .from('subtopics')
-      .select('*')
-      .eq('topic_id', topicId)
-      .order('order_number', { ascending: true })
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return (allSubs as any[]) || []
-  }
-
-  // Get released subtopic IDs for this topic
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let relQuery = (s as any)
-    .from('released_subtopics')
-    .select('subtopic_id')
-
-  if (teacherIds.length > 0) {
-    relQuery = relQuery.in('teacher_id', teacherIds)
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: releasedData } = await relQuery
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const releasedIds = new Set((releasedData as any[])?.map((r: any) => r.subtopic_id) || [])
-
-  if (releasedIds.size === 0) return []
-
-  // Get all subtopics for this topic that are in released set
+  // All subtopics are visible; lesson-level release controls lesson visibility
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data } = await (s as any)
     .from('subtopics')
     .select('*')
     .eq('topic_id', topicId)
-    .in('id', Array.from(releasedIds))
     .order('order_number', { ascending: true })
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

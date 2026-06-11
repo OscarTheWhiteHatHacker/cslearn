@@ -59,33 +59,6 @@ async function getTopic(topicId: string): Promise<TopicData | null> {
   return items?.[0] || null
 }
 
-async function getTeacherIds(): Promise<string[]> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return []
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: profileList } = await (supabase.from('profiles') as any)
-    .select('organization_id')
-    .eq('id', user.id)
-    .limit(1)
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const studentProfile = (profileList as any[] | null)?.[0]
-  const studentOrgId = studentProfile?.organization_id
-
-  if (!studentOrgId) return []
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: teachersInOrg } = await (supabase.from('profiles') as any)
-    .select('id')
-    .eq('role', 'teacher')
-    .eq('organization_id', studentOrgId)
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return ((teachersInOrg as any[]) || []).map((t: any) => t.id)
-}
-
 function renderInline(text: string) {
   const parts: React.ReactNode[] = []
   const regex = /(\*\*(.+?)\*\*|`(.+?)`)/g
@@ -135,23 +108,21 @@ export default async function StudentSubtopicPage({
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  const [subtopic, topic, teacherIds] = await Promise.all([
+  const [subtopic, topic] = await Promise.all([
     getSubtopic(params.subtopicId),
     getTopic(params.topicId),
-    getTeacherIds(),
   ])
 
   if (!subtopic || !topic) {
     notFound()
   }
 
-  // Get released lesson IDs
+  // Get released lesson IDs (RLS handles org-scoping)
   const releasedLessonIds = new Set<string>()
-  if (user && teacherIds.length > 0) {
+  if (user) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: released } = await (supabase.from('released_lessons') as any)
       .select('lesson_id')
-      .in('teacher_id', teacherIds)
 
     for (const r of (released || []) as { lesson_id: string }[]) {
       releasedLessonIds.add(r.lesson_id)
@@ -168,10 +139,7 @@ export default async function StudentSubtopicPage({
   const allLessons = (dbLessons || []) as Lesson[]
 
   // Filter to only released lessons
-  // Show all lessons only if no teachers found (RLS prevents cross-profile reads)
-  const lessons = teacherIds.length === 0
-    ? allLessons
-    : allLessons.filter((l) => releasedLessonIds.has(l.id))
+  const lessons = allLessons.filter((l) => releasedLessonIds.has(l.id))
 
   // If no lessons are released, redirect
   if (lessons.length === 0) {

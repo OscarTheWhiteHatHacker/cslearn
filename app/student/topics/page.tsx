@@ -20,80 +20,28 @@ async function getReleasedTopics(): Promise<TopicSummary[]> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const s: any = supabase
 
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return []
-
-  const { data: profileList } = await s
-    .from('profiles')
-    .select('organization_id')
-    .eq('id', user.id)
-    .limit(1)
-
+  // All topics with subtopics are visible; lesson-level release controls lessons
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const studentProfile = (profileList as any[] | null)?.[0]
-  const studentOrgId = studentProfile?.organization_id
-
-  // Find teachers in same organization
-  let teacherIds: string[] = []
-  if (studentOrgId) {
-    const { data: teachersInOrg } = await s
-      .from('profiles')
-      .select('id')
-      .eq('role', 'teacher')
-      .eq('organization_id', studentOrgId)
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    teacherIds = ((teachersInOrg as any[]) || []).map((t: any) => t.id)
-  }
-
-  // Get all released subtopics by teachers in this org
-  let releasedQuery = s
-    .from('released_subtopics')
+  const { data } = await (s as any)
+    .from('topics')
     .select(`
-      subtopic_id,
-      subtopics!inner (
-        topic_id,
-        topics!inner (
-          id,
-          component,
-          title,
-          order_number
-        )
-      )
+      id,
+      component,
+      title,
+      order_number,
+      subtopics:subtopics(count)
     `)
-
-  if (teacherIds.length > 0) {
-    releasedQuery = releasedQuery.in('teacher_id', teacherIds)
-  }
-
-  const { data: releasedData } = await releasedQuery
-
-  if (!releasedData || releasedData.length === 0) return []
-
-  // De-duplicate topics
-  const topicMap = new Map<string, TopicSummary>()
+    .order('order_number', { ascending: true })
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  for (const item of releasedData as any[]) {
+  return ((data as any[]) || []).map((t: any) => ({
+    id: t.id,
+    component: t.component,
+    title: t.title,
+    order_number: t.order_number,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const topic = (item as any).subtopics?.topics
-    if (topic) {
-      const key = topic.id
-      if (topicMap.has(key)) {
-        topicMap.get(key)!.subtopic_count++
-      } else {
-        topicMap.set(key, {
-          id: topic.id,
-          component: topic.component,
-          title: topic.title,
-          order_number: topic.order_number,
-          subtopic_count: 1,
-        })
-      }
-    }
-  }
-
-  return Array.from(topicMap.values()).sort((a, b) => a.order_number - b.order_number)
+    subtopic_count: (t.subtopics as any[] | undefined)?.length ?? 0,
+  }))
 }
 
 export default function StudentTopicsPage() {
