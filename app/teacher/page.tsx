@@ -130,7 +130,7 @@ async function fetchDashboardData(supabase: any, userId: string): Promise<Dashbo
 
 export default function TeacherDashboard() {
   const router = useRouter()
-  const { supabase } = useSupabase()
+  const { supabase, isLoading: authLoading, user: authUser } = useSupabase()
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [errorState, setErrorState] = useState<string | null>(null)
@@ -148,13 +148,12 @@ export default function TeacherDashboard() {
     abortRef.current = controller
 
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
+      if (!authUser) {
         setUnauthorized(true)
         setLoading(false)
         return
       }
-      const result = await fetchDashboardData(supabase, user.id)
+      const result = await fetchDashboardData(supabase, authUser.id)
       if (controller.signal.aborted) return
       if (result === null) {
         setUnauthorized(true)
@@ -171,7 +170,7 @@ export default function TeacherDashboard() {
       setErrorState(msg)
       setLoading(false)
     }
-  }, [supabase])
+  }, [supabase, authUser])
 
   const handleRetry = useCallback(() => {
     setErrorState(null)
@@ -180,6 +179,7 @@ export default function TeacherDashboard() {
   }, [load])
 
   useEffect(() => {
+    if (authLoading) return
     load()
 
     // Supabase Realtime subscription
@@ -215,7 +215,7 @@ export default function TeacherDashboard() {
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [load])
+  }, [load, authLoading])
 
   // Use useMemo for expensive computations — must be before all early returns
   const answerMap = useMemo(() => {
@@ -237,6 +237,10 @@ export default function TeacherDashboard() {
   const paginatedStudents = useMemo(() => {
     return (data?.allStudents || []).slice(page * STUDENTS_PER_PAGE, (page + 1) * STUDENTS_PER_PAGE)
   }, [data?.allStudents, page])
+
+  if (authLoading) {
+    return <SkeletonDashboard />
+  }
 
   if (unauthorized) {
     router.push('/auth/login')
