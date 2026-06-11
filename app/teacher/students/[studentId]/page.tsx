@@ -130,38 +130,18 @@ export default function StudentDetailPage({
       setLoading(false)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [params.studentId])
+  interval? | null = null
 
-  useEffect(() => {
-    loadData()
+  loadData()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.studentId])
 
   // Add live updates
   useEffect(() => {
-    const interval: ReturnType<typeof setInterval> | null = null
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let channel: any = null
-
-    // Polling fallback every 8s
-    // Supabase Realtime subscription
-    try {
-      channel = supabase
-        .channel('teacher-student-results-live')
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'student_answers' },
-          () => { loadData() },
-        )
-        .subscribe()
-    } catch {
-      // Realtime unavailable — polling handles it
-    }
+    loadData()
 
     return () => {
       if (abortRef.current) abortRef.current.abort()
-      if (interval) clearInterval(interval)
-      if (channel) supabase.removeChannel(channel)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.studentId, loadData])
