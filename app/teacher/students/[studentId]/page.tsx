@@ -129,11 +129,6 @@ export default function StudentDetailPage({
       setErrorState(err instanceof Error ? err.message : 'Failed to load student data')
       setLoading(false)
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  interval? | null = null
-
-  loadData()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.studentId])
 
   // Add live updates
