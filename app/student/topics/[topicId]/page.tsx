@@ -78,6 +78,7 @@ async function getReleasedSubtopics(topicId: string): Promise<SubtopicRow[]> {
   }
 
   // Get released subtopic IDs for this topic
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let relQuery = (s as any)
     .from('released_subtopics')
     .select('subtopic_id')
@@ -86,6 +87,7 @@ async function getReleasedSubtopics(topicId: string): Promise<SubtopicRow[]> {
     relQuery = relQuery.in('teacher_id', teacherIds)
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: releasedData } = await relQuery
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
