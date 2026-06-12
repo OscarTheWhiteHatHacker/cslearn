@@ -56,8 +56,8 @@ async function fetchDashboardData(supabase: any, userId: string): Promise<Dashbo
   // Get teacher profile
   const [profileResult, studentsResult, teacherIdsResult] = await Promise.all([
     s.from('profiles').select('*').eq('id', userId).limit(1),
-    s.from('profiles').select('id, full_name').eq('role', 'student').order('full_name', { ascending: true }),
-    s.from('profiles').select('id').eq('role', 'teacher'),
+    s.from('profiles').select('id, full_name, organization_id').eq('role', 'student').order('full_name', { ascending: true }),
+    s.from('profiles').select('id, organization_id').eq('role', 'teacher'),
   ])
 
   const profileList = profileResult.data
@@ -65,6 +65,16 @@ async function fetchDashboardData(supabase: any, userId: string): Promise<Dashbo
   if (!typedProfile || typedProfile.role !== 'teacher') return null
 
   const teacherOrgId = typedProfile.organization_id
+
+  // If teacher has an org, restrict students and teachers to that org
+  if (teacherOrgId) {
+    studentsResult.data = (studentsResult.data || []).filter(
+      (s: Record<string, unknown>) => s.organization_id === teacherOrgId
+    )
+    teacherIdsResult.data = (teacherIdsResult.data || []).filter(
+      (t: Record<string, unknown>) => t.organization_id === teacherOrgId
+    )
+  }
 
   // Org info (if org exists)
   let orgName = ''
