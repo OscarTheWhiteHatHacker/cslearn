@@ -48,7 +48,7 @@ async function getReleasedTopics(): Promise<TopicSummary[]> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: subs } = await (s as any)
     .from('subtopics')
-    .select('topic_id')
+    .select('id, topic_id')
     .in('id', subtopicIds)
 
   if (!subs || subs.length === 0) return []
