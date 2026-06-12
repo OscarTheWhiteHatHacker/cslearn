@@ -59,7 +59,7 @@ async function getReleasedSubtopics(topicId: string): Promise<SubtopicRow[]> {
 
   if (!releasedSubtopics || releasedSubtopics.length === 0) return []
 
-  const subtopicIds = [...new Set((releasedSubtopics as { subtopic_id: string }[]).map(l => l.subtopic_id))]
+  const subtopicIds = Array.from(new Set((releasedSubtopics as { subtopic_id: string }[]).map(l => l.subtopic_id)))
 
   // Only return subtopics that have at least one released lesson
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
