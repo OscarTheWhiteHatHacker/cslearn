@@ -20,27 +20,69 @@ async function getReleasedTopics(): Promise<TopicSummary[]> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const s: any = supabase
 
-  // All topics with subtopics are visible; lesson-level release controls lessons
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return []
+
+  // Get all released lesson IDs (RLS handles scoping)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data } = await (s as any)
-    .from('topics')
-    .select(`
-      id,
-      component,
-      title,
-      order_number,
-      subtopics:subtopics(count)
-    `)
-    .order('order_number', { ascending: true })
+  const { data: released } = await (s as any)
+    .from('released_lessons')
+    .select('lesson_id')
+
+  if (!released || released.length === 0) return []
+
+  const releasedLessonIds = (released as { lesson_id: string }[]).map(r => r.lesson_id)
+
+  // Find which subtopics have released lessons
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: releasedSubtopics } = await (s as any)
+    .from('lessons')
+    .select('subtopic_id')
+    .in('id', releasedLessonIds)
+
+  if (!releasedSubtopics || releasedSubtopics.length === 0) return []
+
+  const subtopicIds = Array.from(new Set((releasedSubtopics as { subtopic_id: string }[]).map(l => l.subtopic_id)))
+
+  // Find which topics those subtopics belong to
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: subs } = await (s as any)
+    .from('subtopics')
+    .select('topic_id')
+    .in('id', subtopicIds)
+
+  if (!subs || subs.length === 0) return []
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return ((data as any[]) || []).map((t: any) => ({
+  const topicIds = Array.from(new Set((subs as any[]).map((s: any) => s.topic_id)))
+
+  if (topicIds.length === 0) return []
+
+  // Get topics that have released content
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: topics } = await (s as any)
+    .from('topics')
+    .select(`id, component, title, order_number`)
+    .in('id', topicIds)
+    .order('order_number', { ascending: true })
+
+  // Build subtopic counts per topic
+  const countByTopic: Record<string, number> = {}
+  const uniqueSubtopics = Array.from(new Set((releasedSubtopics as { subtopic_id: string }[]).map(l => l.subtopic_id)))
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  for (const sub of (subs as any[])) {
+    if (uniqueSubtopics.includes(sub.id)) {
+      countByTopic[sub.topic_id] = (countByTopic[sub.topic_id] || 0) + 1
+    }
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return ((topics as any[]) || []).map((t: any) => ({
     id: t.id,
     component: t.component,
     title: t.title,
     order_number: t.order_number,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    subtopic_count: (t.subtopics as any[] | undefined)?.length ?? 0,
+    subtopic_count: countByTopic[t.id] || 0,
   }))
 }
 

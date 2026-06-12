@@ -40,12 +40,34 @@ async function getReleasedSubtopics(topicId: string): Promise<SubtopicRow[]> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return []
 
-  // All subtopics are visible; lesson-level release controls lesson visibility
+  // Get all released lesson IDs for this student (RLS handles scoping)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: released } = await (s as any)
+    .from('released_lessons')
+    .select('lesson_id')
+
+  if (!released || released.length === 0) return []
+
+  const releasedLessonIds = (released as { lesson_id: string }[]).map(r => r.lesson_id)
+
+  // Find which subtopics have released lessons
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: releasedSubtopics } = await (s as any)
+    .from('lessons')
+    .select('subtopic_id')
+    .in('id', releasedLessonIds)
+
+  if (!releasedSubtopics || releasedSubtopics.length === 0) return []
+
+  const subtopicIds = [...new Set((releasedSubtopics as { subtopic_id: string }[]).map(l => l.subtopic_id))]
+
+  // Only return subtopics that have at least one released lesson
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data } = await (s as any)
     .from('subtopics')
     .select('*')
     .eq('topic_id', topicId)
+    .in('id', subtopicIds)
     .order('order_number', { ascending: true })
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
