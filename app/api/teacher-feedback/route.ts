@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createServerClient } from '@supabase/ssr'
 import { requireTeacher, csrfProtection } from '@/lib/api-auth'
 
 export async function POST(request: Request) {
@@ -19,7 +19,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing studentId' }, { status: 400 })
     }
 
-    const supabase = await createClient()
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    if (!serviceKey) {
+      return NextResponse.json({ error: 'Service key not configured' }, { status: 500 })
+    }
+
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      serviceKey,
+      { cookies: { getAll: () => [], setAll: () => {} } }
+    )
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase.from('profiles') as any)

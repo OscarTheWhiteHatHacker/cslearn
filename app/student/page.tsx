@@ -8,6 +8,8 @@ export const metadata: Metadata = {
   title: 'Student Dashboard',
 }
 
+export const dynamic = 'force-dynamic'
+
 interface QuestionSetInfo {
   id: string
   subtopic_id: string
