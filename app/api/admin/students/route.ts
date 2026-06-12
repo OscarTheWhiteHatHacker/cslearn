@@ -9,7 +9,7 @@ export async function POST(request: Request) {
     if (csrfError) return csrfError
 
     // Session auth
-    const { errorResponse } = await requireTeacher()
+    const { user, errorResponse } = await requireTeacher()
     if (errorResponse) return errorResponse
 
     const body = await request.json()
@@ -26,6 +26,29 @@ export async function POST(request: Request) {
       serviceKey,
       { cookies: { getAll: () => [], setAll: () => {} } }
     )
+
+    // Helper: verify a student belongs to the teacher's org
+    const verifyStudentOrg = async (studentId: string): Promise<string | null> => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: teacherProfile } = await (supabase.from('profiles') as any)
+        .select('organization_id')
+        .eq('id', user!.id)
+        .limit(1)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const teacherOrg = (teacherProfile as any[] | null)?.[0]?.organization_id
+      if (!teacherOrg) return 'Teacher has no organization'
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: studentProfile } = await (supabase.from('profiles') as any)
+        .select('organization_id')
+        .eq('id', studentId)
+        .limit(1)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const studentOrg = (studentProfile as any[] | null)?.[0]?.organization_id
+      if (!studentOrg || studentOrg !== teacherOrg) return 'Student does not belong to your organization'
+
+      return null
+    }
 
     if (action === 'create') {
       if (!username || !password || !fullName || !orgId) {
@@ -75,6 +98,11 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
       }
 
+      const orgError = await verifyStudentOrg(studentId)
+      if (orgError) {
+        return NextResponse.json({ error: orgError }, { status: 403 })
+      }
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error: updateError } = await (supabase.from('profiles') as any)
         .update({ full_name: fullName.trim() })
@@ -90,6 +118,11 @@ export async function POST(request: Request) {
     if (action === 'delete') {
       if (!studentId) {
         return NextResponse.json({ error: 'Missing studentId' }, { status: 400 })
+      }
+
+      const orgError = await verifyStudentOrg(studentId)
+      if (orgError) {
+        return NextResponse.json({ error: orgError }, { status: 403 })
       }
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

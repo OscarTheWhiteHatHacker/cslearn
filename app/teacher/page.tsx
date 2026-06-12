@@ -54,10 +54,8 @@ async function fetchDashboardData(supabase: any, userId: string): Promise<Dashbo
   const s: any = supabase
 
   // Get teacher profile
-  const [profileResult, studentsResult, teacherIdsResult] = await Promise.all([
+  const [profileResult] = await Promise.all([
     s.from('profiles').select('*').eq('id', userId).limit(1),
-    s.from('profiles').select('id, full_name, organization_id').eq('role', 'student').order('full_name', { ascending: true }),
-    s.from('profiles').select('id, organization_id').eq('role', 'teacher'),
   ])
 
   const profileList = profileResult.data
@@ -66,15 +64,28 @@ async function fetchDashboardData(supabase: any, userId: string): Promise<Dashbo
 
   const teacherOrgId = typedProfile.organization_id
 
-  // If teacher has an org, restrict students and teachers to that org
-  if (teacherOrgId) {
-    studentsResult.data = (studentsResult.data || []).filter(
-      (s: Record<string, unknown>) => s.organization_id === teacherOrgId
-    )
-    teacherIdsResult.data = (teacherIdsResult.data || []).filter(
-      (t: Record<string, unknown>) => t.organization_id === teacherOrgId
-    )
+  // If teacher has no org, return empty dashboard
+  if (!teacherOrgId) {
+    return {
+      teacherName: typedProfile?.full_name || 'Teacher',
+      orgName: '',
+      orgSlug: '',
+      students: [],
+      allStudents: [],
+      questionSets: [],
+      answers: [],
+      totalStudents: 0,
+      totalQuestionSets: 0,
+      totalSubmissions: 0,
+      activeStudents: 0,
+    }
   }
+
+  // Fetch students and teachers scoped to this org only
+  const [studentsResult, teacherIdsResult] = await Promise.all([
+    s.from('profiles').select('id, full_name').eq('role', 'student').eq('organization_id', teacherOrgId).order('full_name', { ascending: true }),
+    s.from('profiles').select('id').eq('role', 'teacher').eq('organization_id', teacherOrgId),
+  ])
 
   // Org info (if org exists)
   let orgName = ''

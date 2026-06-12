@@ -9,7 +9,7 @@ export async function POST(request: Request) {
     if (csrfError) return csrfError
 
     // Session auth
-    const { errorResponse } = await requireTeacher()
+    const { user, errorResponse } = await requireTeacher()
     if (errorResponse) return errorResponse
 
     const body = await request.json()
@@ -29,6 +29,29 @@ export async function POST(request: Request) {
       serviceKey,
       { cookies: { getAll: () => [], setAll: () => {} } }
     )
+
+    // Verify the target student belongs to the same org as the teacher
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: teacherProfile } = await (supabase.from('profiles') as any)
+      .select('organization_id')
+      .eq('id', user!.id)
+      .limit(1)
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const teacherOrg = (teacherProfile as any[] | null)?.[0]?.organization_id
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: studentProfile } = await (supabase.from('profiles') as any)
+      .select('organization_id')
+      .eq('id', studentId)
+      .limit(1)
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const studentOrg = (studentProfile as any[] | null)?.[0]?.organization_id
+
+    if (!teacherOrg || !studentOrg || teacherOrg !== studentOrg) {
+      return NextResponse.json({ error: 'Student does not belong to your organization' }, { status: 403 })
+    }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase.from('profiles') as any)
