@@ -132,6 +132,7 @@ export default function SignupPage() {
   }
 
   const handleRoleSelect = (selectedRole: RoleType) => {
+    dispatch({ type: 'RESET_ERROR' })
     dispatch({ type: 'SET_ROLE', role: selectedRole })
     if (selectedRole === 'student') {
       dispatch({ type: 'SET_SCHOOL_ACTION', action: 'join' })
@@ -437,7 +438,7 @@ export default function SignupPage() {
 
               <button
                 type="button"
-                onClick={() => dispatch({ type: 'SET_STEP', step: 1 })}
+                onClick={() => { dispatch({ type: 'RESET_ERROR' }); dispatch({ type: 'SET_STEP', step: 1 }) }}
                 className="w-full text-center text-sm text-gray-500 hover:text-gray-700"
               >
                 &larr; Back
@@ -535,7 +536,7 @@ export default function SignupPage() {
 
               <button
                 type="button"
-                onClick={() => dispatch({ type: 'SET_STEP', step: 2 })}
+                onClick={() => { dispatch({ type: 'RESET_ERROR' }); dispatch({ type: 'SET_STEP', step: 2 }) }}
                 className="w-full text-center text-sm text-gray-500 hover:text-gray-700"
               >
                 &larr; Back
