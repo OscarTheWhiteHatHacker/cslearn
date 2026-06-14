@@ -9,13 +9,12 @@ import { Button } from '@/components/ui/Button'
 import ThemeToggle from '@/components/ThemeToggle'
 import Logo from '@/components/Logo'
 
-type RoleType = 'student' | 'teacher' | 'setup'
+type RoleType = 'student' | 'teacher' | 'org_admin'
 type SchoolAction = 'create' | 'join'
 
 interface SignupState {
   step: number
   role: RoleType | null
-  schoolAction: SchoolAction
   schoolName: string
   schoolSlug: string
   username: string
@@ -46,7 +45,6 @@ type SignupAction =
 const initialState: SignupState = {
   step: 1,
   role: null,
-  schoolAction: 'create',
   schoolName: '',
   schoolSlug: '',
   username: '',
@@ -65,8 +63,6 @@ function signupReducer(state: SignupState, action: SignupAction): SignupState {
       return { ...state, step: action.step }
     case 'SET_ROLE':
       return { ...state, role: action.role }
-    case 'SET_SCHOOL_ACTION':
-      return { ...state, schoolAction: action.action }
     case 'SET_SCHOOL_NAME':
       return { ...state, schoolName: action.name }
     case 'SET_SCHOOL_SLUG':
@@ -110,17 +106,18 @@ export default function SignupPage() {
     document.title = 'Sign Up | CSLearn'
   }, [])
 
-  const { step, role, schoolAction, schoolName, schoolSlug, username, email, password, fullName, error, loading, success, successMessage } = state
+  const { step, role, schoolName, schoolSlug, username, email, password, fullName, error, loading, success, successMessage } = state
 
   const isStudent = role === 'student'
-  const isTeacher = role === 'teacher' || role === 'setup'
+  const isTeacher = role === 'teacher'
+  const isOrgAdmin = role === 'org_admin'
 
   const slugify = (text: string) =>
     text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 
   const handleSchoolNext = () => {
     dispatch({ type: 'RESET_ERROR' })
-    if (schoolAction === 'create') {
+    if (isOrgAdmin) {
       if (!schoolName.trim()) {
         dispatch({ type: 'SET_ERROR', error: 'Please enter a school name' })
         return
@@ -138,10 +135,10 @@ export default function SignupPage() {
     dispatch({ type: 'SET_ROLE', role: selectedRole })
     if (selectedRole === 'student') {
       dispatch({ type: 'SET_SCHOOL_ACTION', action: 'join' })
-    } else if (selectedRole === 'setup') {
+    } else if (selectedRole === 'org_admin') {
       dispatch({ type: 'SET_SCHOOL_ACTION', action: 'create' })
     } else {
-      dispatch({ type: 'SET_SCHOOL_ACTION', action: 'create' })
+      dispatch({ type: 'SET_SCHOOL_ACTION', action: 'join' })
     }
     dispatch({ type: 'SET_STEP', step: 2 })
   }
@@ -177,11 +174,11 @@ export default function SignupPage() {
         username: username.trim().toLowerCase(),
         password,
         fullName: fullName.trim(),
-        role: isStudent ? 'student' : 'teacher',
-        email: isTeacher ? email.trim() : undefined,
+        role: isOrgAdmin ? 'org_admin' : isStudent ? 'student' : 'teacher',
+        email: isTeacher || isOrgAdmin ? email.trim() : undefined,
       }
 
-      if (isTeacher && schoolAction === 'create') {
+      if (isOrgAdmin) {
         signupPayload.orgAction = 'create'
         signupPayload.orgName = schoolName.trim()
       } else {
@@ -347,15 +344,15 @@ export default function SignupPage() {
                       </svg>
                     </div>
                     <div>
-                      <p className="font-medium text-gray-900">I&apos;m a teacher at a school</p>
-                      <p className="text-sm text-gray-500">Join or create a school for your students</p>
+                      <p className="font-medium text-gray-900">I&apos;m a teacher at an existing school</p>
+                      <p className="text-sm text-gray-500">Join an existing school using the school code</p>
                     </div>
                   </div>
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => handleRoleSelect('setup')}
+                  onClick={() => handleRoleSelect('org_admin')}
                   className="w-full rounded-lg border border-gray-300 bg-white p-4 text-left transition-all hover:border-accent hover:bg-accent-bg/50 focus:outline-none focus:ring-2 focus:ring-accent"
                 >
                   <div className="flex items-center gap-4">
@@ -365,8 +362,8 @@ export default function SignupPage() {
                       </svg>
                     </div>
                     <div>
-                      <p className="font-medium text-gray-900">I&apos;m setting up a school</p>
-                      <p className="text-sm text-gray-500">Create a new school for teachers and students</p>
+                      <p className="font-medium text-gray-900">I&apos;m creating a new school as an admin</p>
+                      <p className="text-sm text-gray-500">Create a new school and manage your students and teachers</p>
                     </div>
                   </div>
                 </button>
@@ -378,88 +375,43 @@ export default function SignupPage() {
           {step === 2 && (
             <div className="space-y-4">
               <h2 className="text-lg font-semibold text-gray-900">
-                {isStudent ? 'Join your school' : 'School information'}
+                {isOrgAdmin ? 'Create your school' : 'Join your school'}
               </h2>
               <p className="text-sm text-gray-500">
-                {isStudent
-                  ? 'Enter the school code provided by your teacher.'
-                  : 'Create a new school or join an existing one.'}
+                {isOrgAdmin
+                  ? 'Enter a name for your school. We\'ll generate a unique code for students and teachers to join.'
+                  : isTeacher
+                  ? 'Enter the school code provided by your school administrator.'
+                  : 'Enter the school code provided by your teacher.'}
               </p>
 
-              {isTeacher ? (
-                <div className="space-y-4">
-                  <div className="flex gap-3">
-                    <button
-                      type="button"
-                      onClick={() => dispatch({ type: 'SET_SCHOOL_ACTION', action: 'create' })}
-                      className={`flex-1 rounded-lg border p-3 text-center text-sm font-medium transition-all ${
-                        schoolAction === 'create'
-                          ? 'border-accent bg-accent-bg text-accent'
-                          : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-50'
-                      }`}
-                    >
-                      Create new school
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => dispatch({ type: 'SET_SCHOOL_ACTION', action: 'join' })}
-                      className={`flex-1 rounded-lg border p-3 text-center text-sm font-medium transition-all ${
-                        schoolAction === 'join'
-                          ? 'border-accent bg-accent-bg text-accent'
-                          : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-50'
-                      }`}
-                    >
-                      Join existing school
-                    </button>
-                  </div>
-
-                  {schoolAction === 'create' ? (
-                    <div>
-                      <label htmlFor="schoolName" className="block text-sm font-medium text-gray-700">
-                        School name
-                      </label>
-                      <input
-                        id="schoolName"
-                        type="text"
-                        required
-                        value={schoolName}
-                        onChange={(e) => dispatch({ type: 'SET_SCHOOL_NAME', name: e.target.value })}
-                        className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-accent focus:outline-none focus:ring-accent sm:text-sm text-gray-900 bg-[var(--input-bg)] text-[var(--input-text)]"
-                        placeholder="e.g. Springfield High School"
-                      />
-                      {schoolName.trim() && (
-                        <p className="mt-1 text-xs text-gray-500">
-                          School code will be: <code className="bg-gray-100 px-1 rounded">{slugify(schoolName)}</code>
-                        </p>
-                      )}
-                    </div>
-                  ) : (
-                    <div>
-                      <label htmlFor="schoolSlug" className="block text-sm font-medium text-gray-700">
-                        School code
-                      </label>
-                      <input
-                        id="schoolSlug"
-                        type="text"
-                        required
-                        value={schoolSlug}
-                        onChange={(e) => dispatch({ type: 'SET_SCHOOL_SLUG', slug: e.target.value })}
-                        className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-accent focus:outline-none focus:ring-accent sm:text-sm text-gray-900 bg-[var(--input-bg)] text-[var(--input-text)]"
-                        placeholder="e.g. springfield-high"
-                      />
-                      <p className="mt-1 text-xs text-gray-500">
-                        Ask your school administrator for the code
-                      </p>
-                    </div>
+              {isOrgAdmin ? (
+                <div>
+                  <label htmlFor="schoolName" className="block text-sm font-medium text-gray-700">
+                    School name
+                  </label>
+                  <input
+                    id="schoolName"
+                    type="text"
+                    required
+                    value={schoolName}
+                    onChange={(e) => dispatch({ type: 'SET_SCHOOL_NAME', name: e.target.value })}
+                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-accent focus:outline-none focus:ring-accent sm:text-sm text-gray-900 bg-[var(--input-bg)] text-[var(--input-text)]"
+                    placeholder="e.g. Springfield High School"
+                  />
+                  {schoolName.trim() && (
+                    <p className="mt-1 text-xs text-gray-500">
+                      School code will be: <code className="bg-gray-100 px-1 rounded">{slugify(schoolName)}</code>
+                    </p>
                   )}
                 </div>
               ) : (
                 <div>
-                  <label htmlFor="studentSlug" className="block text-sm font-medium text-gray-700">
+                  <label htmlFor="schoolSlug" className="block text-sm font-medium text-gray-700">
                     School code
                   </label>
                   <input
-                    id="studentSlug"
+                    id="schoolSlug"
                     type="text"
                     required
                     value={schoolSlug}
@@ -468,7 +420,9 @@ export default function SignupPage() {
                     placeholder="e.g. springfield-high"
                   />
                   <p className="mt-1 text-xs text-gray-500">
-                    Ask your teacher for the school code
+                    {isTeacher
+                      ? 'Ask your school administrator for the code'
+                      : 'Ask your teacher for the school code'}
                   </p>
                 </div>
               )}

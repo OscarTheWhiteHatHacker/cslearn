@@ -20,7 +20,7 @@ const signupSchema = z.object({
     .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character (e.g. !@#$%^&*)'),
   fullName: z.string().min(1, 'Full name is required').max(100, 'Full name must be 100 characters or less'),
   email: z.string().email('Please enter a valid email address').optional().or(z.literal('')),
-  role: z.enum(['student', 'teacher']),
+  role: z.enum(['student', 'teacher', 'org_admin']),
   orgSlug: z.string().max(100).optional().default(''),
   orgAction: z.enum(['create', 'join']).optional(),
   orgName: z.string().max(200).optional().default(''),
@@ -54,7 +54,7 @@ export async function POST(request: Request) {
     })
 
     // 1. Determine email: real email for teachers, placeholder for students
-    const placeholderEmail = role === 'teacher' && email ? email : `${username}@${role}.cslearn.io`
+    const placeholderEmail = (role === 'teacher' || role === 'org_admin') && email ? email : `${username}@${role}.cslearn.io`
 
     // 2. Create user in auth (auto-confirmed by admin API)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
