@@ -126,8 +126,11 @@ export default async function TeacherTopicsPage({
 
       {/* Topics grid */}
       <div className="grid gap-6 md:grid-cols-2">
-        {topicsWithCounts.map((topic) => (
-          <Link
+        {topicsWithCounts.map((topic) => {
+          const specCode = activeSubject?.slug === 'computer-science'
+            ? `J277/${topic.component}`
+            : topic.component || activeSubject?.slug?.substring(0, 4)?.toUpperCase()
+          return <Link
             key={topic.id}
             href={`/teacher/topics/${topic.id}`}
             className="group rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition-all hover:shadow-md hover:border-blue-300 dark:bg-gray-800 dark:border-gray-700 dark:hover:border-blue-600"
@@ -135,7 +138,7 @@ export default async function TeacherTopicsPage({
             <div className="flex items-start justify-between">
               <div>
                 <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800 dark:bg-blue-900 dark:text-blue-300">
-                  {topic.component || activeSubject?.slug?.substring(0, 4)?.toUpperCase()}
+                  {specCode}
                 </span>
                 <h2 className="mt-2 text-lg font-semibold text-gray-900 group-hover:text-blue-600 dark:text-gray-100 dark:group-hover:text-blue-400">
                   {topic.title}
@@ -149,7 +152,7 @@ export default async function TeacherTopicsPage({
               {topic.subtopic_count} subtopic{topic.subtopic_count !== 1 ? 's' : ''}
             </p>
           </Link>
-        ))}
+        })}
       </div>
 
       {topicsWithCounts.length === 0 && (
