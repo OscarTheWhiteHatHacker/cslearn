@@ -33,7 +33,7 @@ export type Database = {
         Row: {
           id: string
           email: string
-          role: 'teacher' | 'student'
+          role: 'teacher' | 'student' | 'org_admin'
           full_name: string
           username: string | null
           organization_id: string | null
@@ -41,7 +41,7 @@ export type Database = {
         Insert: {
           id: string
           email: string
-          role: 'teacher' | 'student'
+          role: 'teacher' | 'student' | 'org_admin'
           full_name: string
           username?: string | null
           organization_id?: string | null
@@ -49,7 +49,7 @@ export type Database = {
         Update: {
           id?: string
           email?: string
-          role?: 'teacher' | 'student'
+          role?: 'teacher' | 'student' | 'org_admin'
           full_name?: string
           username?: string | null
           organization_id?: string | null
@@ -171,6 +171,78 @@ export type Database = {
           feedback_json?: Json
           submitted_at?: string
           total_score?: number
+        }
+      }
+      subjects: {
+        Row: {
+          id: string
+          name: string
+          slug: string
+          description: string
+          price_pence: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          slug: string
+          description: string
+          price_pence: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          slug?: string
+          description?: string
+          price_pence?: number
+          created_at?: string
+        }
+      }
+      org_purchases: {
+        Row: {
+          id: string
+          org_id: string
+          subject_id: string
+          purchased_at: string
+          stripe_payment_intent_id: string | null
+        }
+        Insert: {
+          id?: string
+          org_id: string
+          subject_id: string
+          purchased_at?: string
+          stripe_payment_intent_id?: string | null
+        }
+        Update: {
+          id?: string
+          org_id?: string
+          subject_id?: string
+          purchased_at?: string
+          stripe_payment_intent_id?: string | null
+        }
+      }
+      subject_teacher_access: {
+        Row: {
+          id: string
+          teacher_id: string
+          subject_id: string
+          granted_by: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          teacher_id: string
+          subject_id: string
+          granted_by: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          teacher_id?: string
+          subject_id?: string
+          granted_by?: string
+          created_at?: string
         }
       }
     }

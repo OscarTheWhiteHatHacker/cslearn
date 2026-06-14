@@ -11,7 +11,7 @@ export async function middleware(request: NextRequest) {
   // Auth pages - redirect to dashboard if already logged in
   if (pathname.startsWith('/auth/login') || pathname.startsWith('/auth/signup')) {
     if (user && role) {
-      const target = role === 'teacher' ? '/teacher' : '/student'
+      const target = role === 'student' ? '/student' : '/teacher'
       return NextResponse.redirect(new URL(target, request.url), { status: 303 })
     }
     return supabaseResponse
@@ -31,7 +31,7 @@ export async function middleware(request: NextRequest) {
 
   // Root page - redirect to dashboard based on role
   if (pathname === '/') {
-    if (role === 'teacher') {
+    if (role === 'teacher' || role === 'org_admin') {
       return NextResponse.redirect(new URL('/teacher', request.url), { status: 303 })
     }
     if (role === 'student') {
@@ -39,9 +39,9 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Teacher routes - role check from JWT
+  // Teacher routes - allow teachers AND org_admins
   if (pathname.startsWith('/teacher')) {
-    if (role !== 'teacher') {
+    if (role !== 'teacher' && role !== 'org_admin') {
       return NextResponse.redirect(new URL('/student', request.url), { status: 303 })
     }
     return supabaseResponse

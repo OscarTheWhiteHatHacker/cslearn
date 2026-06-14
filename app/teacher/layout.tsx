@@ -31,9 +31,11 @@ export default async function TeacherLayout({
     await supabase.auth.signOut()
     redirect('/auth/login')
   }
-  if (typedProfile.role !== 'teacher') {
+  if (typedProfile.role !== 'teacher' && typedProfile.role !== 'org_admin') {
     redirect('/student')
   }
+
+  const isOrgAdmin = typedProfile.role === 'org_admin'
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -53,12 +55,20 @@ export default async function TeacherLayout({
               <div className="px-3 py-2">
                 <NavLink href="/teacher/students">Students</NavLink>
               </div>
+              {isOrgAdmin && (
+                <div className="px-3 py-2">
+                  <NavLink href="/teacher/subjects">Subjects</NavLink>
+                </div>
+              )}
             </nav>
             {/* Mobile nav */}
             <nav className="flex sm:hidden items-center gap-3" aria-label="Mobile navigation">
               <Link href="/teacher" className="text-sm font-medium text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100">D</Link>
               <Link href="/teacher/topics" className="text-sm font-medium text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100">T</Link>
               <Link href="/teacher/students" className="text-sm font-medium text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100">S</Link>
+              {isOrgAdmin && (
+                <Link href="/teacher/subjects" className="text-sm font-medium text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100">Sub</Link>
+              )}
             </nav>
           </div>
           <div className="flex items-center gap-3">
