@@ -470,7 +470,7 @@ export default function SignupPage() {
                 required
               />
 
-              {isTeacher && (
+              {isTeacher || isOrgAdmin && (
                 <Input
                   id="email"
                   label="Email address"
