@@ -55,7 +55,7 @@ export default async function TeacherTopicsPage({
 
   // Intersect purchased + accessible
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const validSubjectIds = [...purchasedIds].filter((id: any) => accessibleIds.has(id))
+  const validSubjectIds = Array.from(purchasedIds).filter((id: any) => accessibleIds.has(id))
 
   if (validSubjectIds.length === 0) {
     return (
