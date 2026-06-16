@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useSupabase } from '@/components/supabase-provider'
 import { SkeletonDashboard } from '@/components/Skeleton'
 import { Button } from '@/components/ui/Button'
@@ -93,6 +93,7 @@ async function fetchSubjectsData(supabase: any, userId: string): Promise<Subject
 
 export default function TeacherSubjectsPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { supabase, isLoading: authLoading, user: authUser } = useSupabase()
   const [data, setData] = useState<SubjectsPageData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -154,6 +155,22 @@ export default function TeacherSubjectsPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [load, authLoading])
+
+  // Reload data when returning from Stripe checkout
+  useEffect(() => {
+    const success = searchParams.get('success')
+    const cancelled = searchParams.get('cancelled')
+    if (success || cancelled) {
+      load()
+      // Clean URL params so refresh doesn't re-trigger
+      const params = new URLSearchParams(searchParams.toString())
+      params.delete('success')
+      params.delete('cancelled')
+      const qs = params.toString()
+      router.replace(qs ? `/teacher/subjects?${qs}` : '/teacher/subjects', { scroll: false })
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
 
   const handleBuy = async (subjectId: string) => {
     setBuyingSubject((prev) => ({ ...prev, [subjectId]: true }))

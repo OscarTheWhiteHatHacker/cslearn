@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createServerClient } from '@supabase/ssr'
 import Stripe from 'stripe'
 
 export async function POST(request: Request) {
@@ -33,6 +34,7 @@ export async function POST(request: Request) {
     const session = event.data.object as Stripe.Checkout.Session
     const subjectId = session.metadata?.subject_id
     const orgId = session.metadata?.org_id
+    const purchaserId = session.metadata?.purchaser_id
     const paymentIntentId = session.payment_intent as string | undefined
 
     if (!subjectId || !orgId) {
@@ -40,8 +42,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing metadata' }, { status: 400 })
     }
 
+    // Use service role key — Stripe webhook has no user session, RLS would block
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    if (!serviceKey) {
+      return NextResponse.json({ error: 'Service key not configured' }, { status: 500 })
+    }
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      serviceKey,
+      { cookies: { getAll: () => [], setAll: () => {} } }
+    )
+
     // Insert purchase record
-    const supabase = await createClient()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error: insertError } = await (supabase.from('org_purchases') as any)
       .insert({
@@ -51,7 +63,6 @@ export async function POST(request: Request) {
       })
 
     if (insertError) {
-      // If duplicate (already purchased), that's fine — just acknowledge
       if (insertError.code === '23505') {
         console.log('[Stripe Webhook] Duplicate purchase ignored for', subjectId, orgId)
         return NextResponse.json({ received: true })
@@ -61,6 +72,21 @@ export async function POST(request: Request) {
     }
 
     console.log('[Stripe Webhook] Purchase recorded:', subjectId, orgId)
+
+    // Auto-grant access to the purchaser (org_admin) 
+    if (purchaserId) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error: grantError } = await (supabase.from('subject_teacher_access') as any)
+        .upsert(
+          { teacher_id: purchaserId, subject_id: subjectId, granted_by: purchaserId },
+          { onConflict: 'teacher_id, subject_id' }
+        )
+      if (grantError) {
+        console.error('[Stripe Webhook] Auto-grant error:', grantError)
+      } else {
+        console.log('[Stripe Webhook] Auto-granted access to purchaser:', purchaserId)
+      }
+    }
   }
 
   return NextResponse.json({ received: true })

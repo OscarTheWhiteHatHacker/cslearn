@@ -89,6 +89,7 @@ export async function POST(request: Request) {
       metadata: {
         subject_id: subjectId,
         org_id: profile.organization_id,
+        purchaser_id: user.id,
       },
       success_url: `${origin}/teacher/subjects?success=1`,
       cancel_url: `${origin}/teacher/subjects?cancelled=1`,
