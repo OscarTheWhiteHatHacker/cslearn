@@ -151,6 +151,7 @@ export default function SignupPage() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
+    if (step !== 3) return  // Only validate on personal details step
     dispatch({ type: 'SET_LOADING', loading: true })
     dispatch({ type: 'RESET_ERROR' })
 
