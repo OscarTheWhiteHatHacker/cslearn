@@ -60,7 +60,7 @@ async function fetchDashboardData(supabase: any, userId: string): Promise<Dashbo
 
   const profileList = profileResult.data
   const typedProfile = profileList?.[0]
-  if (!typedProfile || typedProfile.role !== 'teacher') return null
+  if (!typedProfile || (typedProfile.role !== 'teacher' && typedProfile.role !== 'org_admin')) return null
 
   const teacherOrgId = typedProfile.organization_id
 
