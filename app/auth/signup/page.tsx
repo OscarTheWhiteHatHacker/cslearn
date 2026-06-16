@@ -106,6 +106,11 @@ export default function SignupPage() {
     document.title = 'Sign Up | CSLearn'
   }, [])
 
+  // Clear error whenever step changes (guard against stale state from any navigation path)
+  useEffect(() => {
+    dispatch({ type: 'RESET_ERROR' })
+  }, [state.step])
+
   const { step, role, schoolName, schoolSlug, username, email, password, fullName, error, loading, success, successMessage } = state
 
   const isStudent = role === 'student'
