@@ -80,29 +80,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Subject already purchased' }, { status: 400 })
   }
 
-  // Free subjects (£0): grant directly without Stripe
-  if (subject.price_pence === 0) {
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-    if (serviceKey) {
-      const { createServerClient } = await import('@supabase/ssr')
-      const adminSupabase = createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        serviceKey,
-        { cookies: { getAll: () => [], setAll: () => {} } }
-      )
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (adminSupabase.from('org_purchases') as any)
-        .upsert({ org_id: profile.organization_id, subject_id: subjectId, stripe_payment_intent_id: null },
-          { onConflict: 'org_id,subject_id' })
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (adminSupabase.from('subject_teacher_access') as any)
-        .upsert({ teacher_id: user.id, subject_id: subjectId, granted_by: user.id },
-          { onConflict: 'teacher_id,subject_id' })
-    }
-    const origin = new URL(request.url).origin
-    return NextResponse.json({ url: `${origin}/teacher/subjects?success=1` })
-  }
-
   // Create Stripe Checkout Session
   const origin = new URL(request.url).origin
 
