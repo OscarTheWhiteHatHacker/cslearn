@@ -73,7 +73,7 @@ function renderInline(text: string) {
     if (match[2] !== undefined) {
       parts.push(<strong key={idx++}>{match[2]}</strong>)
     } else if (match[3] !== undefined) {
-      parts.push(<code key={idx++} className="bg-gray-100 text-red-600 px-1 rounded text-xs font-mono">{match[3]}</code>)
+      parts.push(<code key={idx++} className="bg-gray-100 dark:bg-gray-700 text-red-600 dark:text-red-400 px-1 rounded text-xs font-mono">{match[3]}</code>)
     }
     lastIndex = match.index + match[0].length
   }
@@ -86,15 +86,15 @@ function renderInline(text: string) {
 function renderExplanation(text: string) {
   return text.split('\n').map((line: string, i: number) => {
     if (line.startsWith('## ')) {
-      return <h3 key={i} className="text-base font-semibold text-gray-900 mt-4 mb-2">{line.replace('## ', '')}</h3>
+      return <h3 key={i} className="text-base font-semibold text-gray-900 dark:text-gray-100 mt-4 mb-2">{line.replace('## ', '')}</h3>
     }
     if (line.startsWith('### ')) {
-      return <h4 key={i} className="text-sm font-semibold text-gray-800 mt-3 mb-1">{line.replace('### ', '')}</h4>
+      return <h4 key={i} className="text-sm font-semibold text-gray-800 dark:text-gray-200 mt-3 mb-1">{line.replace('### ', '')}</h4>
     }
     if (line.trim() === '') {
       return <br key={i} />
     }
-    return <p key={i} className="mb-2">{renderInline(line)}</p>
+    return <p key={i} className="mb-2 dark:text-gray-300">{renderInline(line)}</p>
   })
 }
 

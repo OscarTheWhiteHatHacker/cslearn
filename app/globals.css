@@ -66,6 +66,10 @@
   color: var(--text-primary);
 }
 
+.dark .text-gray-800 {
+  color: var(--text-primary);
+}
+
 .dark .text-gray-700 {
   color: var(--text-secondary);
 }
