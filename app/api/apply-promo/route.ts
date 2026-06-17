@@ -1,20 +1,33 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createServerClient } from '@supabase/ssr'
 import { csrfProtection } from '@/lib/api-auth'
+import { createClient } from '@/lib/supabase/server'
+import Stripe from 'stripe'
 
 export async function POST(request: Request) {
   // CSRF check
   const csrfError = csrfProtection(request)
   if (csrfError) return csrfError
 
-  const supabase = await createClient()
-
-  const { data: { user } } = await supabase.auth.getUser()
+  // Use anon client for auth (reads session cookies)
+  const anonSupabase = await createClient()
+  const { data: { user } } = await anonSupabase.auth.getUser()
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  // Check teacher or org_admin role
+  // Use service role key for db writes (bypasses RLS for org_purchases/subject_teacher_access)
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!serviceKey) {
+    return NextResponse.json({ error: 'Service key not configured' }, { status: 500 })
+  }
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    serviceKey,
+    { cookies: { getAll: () => [], setAll: () => {} } }
+  )
+
+  // Check teacher or org_admin role (using service role client for the profile read too)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: profileList } = await (supabase.from('profiles') as any)
     .select('role, organization_id')
@@ -36,9 +49,27 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Missing subjectId or promoCode' }, { status: 400 })
   }
 
-  // Validate promo code
-  if (promoCode !== 'freemoney') {
-    return NextResponse.json({ error: 'Invalid promo code' }, { status: 400 })
+  // Validate promo code against Stripe
+  if (!process.env.STRIPE_SECRET_KEY) {
+    return NextResponse.json({ error: 'Stripe not configured' }, { status: 500 })
+  }
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
+
+  let codeValid = false
+  try {
+    const codes = await stripe.promotionCodes.list({
+      code: promoCode.trim().toLowerCase(),
+      active: true,
+      limit: 1,
+    })
+    codeValid = codes.data.length > 0
+  } catch (err) {
+    console.error('[Apply Promo] Stripe lookup error:', err)
+    return NextResponse.json({ error: 'Failed to validate promo code' }, { status: 500 })
+  }
+
+  if (!codeValid) {
+    return NextResponse.json({ error: 'Invalid or expired promo code' }, { status: 400 })
   }
 
   // Check if subject exists
@@ -76,12 +107,22 @@ export async function POST(request: Request) {
     })
 
   if (insertError) {
-    // Handle duplicate gracefully
     if (insertError.code === '23505') {
       return NextResponse.json({ success: true, message: 'Subject already unlocked!' })
     }
     console.error('[Apply Promo] Insert error:', insertError)
     return NextResponse.json({ error: `Failed to apply promo: ${insertError.message}` }, { status: 500 })
+  }
+
+  // Auto-grant access to the person who applied the promo
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error: grantError } = await (supabase.from('subject_teacher_access') as any)
+    .upsert(
+      { teacher_id: user.id, subject_id: subjectId, granted_by: user.id },
+      { onConflict: 'teacher_id,subject_id' }
+    )
+  if (grantError) {
+    console.error('[Apply Promo] Auto-grant error:', grantError)
   }
 
   return NextResponse.json({ success: true, message: 'Subject unlocked!' })
