@@ -3,6 +3,12 @@ import { createClient } from '@/lib/supabase/server'
 import { csrfProtection } from '@/lib/api-auth'
 import Stripe from 'stripe'
 
+// Stripe Price IDs for each purchasable subject
+const SUBJECT_PRICE_IDS: Record<string, string> = {
+  'aqa-english-language': 'price_1TjOl84oCNWl2tLiEfMXBvlb',
+  'edexcel-english-language': 'price_1TjOlA4oCNWl2tLizvnksPJE',
+}
+
 export async function POST(request: Request) {
   // Lazy-init Stripe so the build doesn't fail on missing env var
   if (!process.env.STRIPE_SECRET_KEY) {
@@ -42,16 +48,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Missing subjectId' }, { status: 400 })
   }
 
-  // Get subject details
+  // Get subject details (include slug for Stripe price lookup)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: subjectList } = await (supabase.from('subjects') as any)
-    .select('name, price_pence')
+    .select('name, slug, price_pence')
     .eq('id', subjectId)
     .limit(1)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const subject = (subjectList as any[] | null)?.[0]
   if (!subject) {
     return NextResponse.json({ error: 'Subject not found' }, { status: 404 })
+  }
+
+  // Look up Stripe Price ID for this subject
+  const priceId = SUBJECT_PRICE_IDS[subject.slug]
+  if (!priceId) {
+    return NextResponse.json({ error: 'No Stripe price configured for this subject' }, { status: 500 })
   }
 
   // Check if already purchased
@@ -76,13 +88,7 @@ export async function POST(request: Request) {
       payment_method_types: ['card'],
       line_items: [
         {
-          price_data: {
-            currency: 'gbp',
-            product_data: {
-              name: subject.name,
-            },
-            unit_amount: subject.price_pence,
-          },
+          price: priceId,
           quantity: 1,
         },
       ],
