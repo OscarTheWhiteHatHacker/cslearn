@@ -1,6 +1,6 @@
 # CSLearn Phase 2 Audit Backlog
 
-**Total Recommendations**: 570
+**Total Recommendations**: 614
 **Generated**: Automated audit via Python web scraper + Playwright browser automation
 
 ---
@@ -10,10 +10,10 @@
 | Metric | Count |
 |--------|-------|
 | Total items | 570 |
-| Completed (✅) | 171 |
-| Remaining | 399 |
+| Completed (✅) | 217 |
+| Remaining | 353 |
 
-Items marked with ✅ have been implemented. Items without a marker are still pending (171 done, 399 remaining).
+Items marked with ✅ have been implemented. Items without a marker are still pending (217 done, 397 remaining).
 
 ---
 
@@ -1174,3 +1174,27 @@ Share progress reports via link.
 Animated number transition on stat cards.
 ### 570. `[P4]` [ACCESS] [LOW] Dyslexia-friendly font toggle
 OpenDyslexic font option.
+
+# Phase 3 — Subjects, Purchases & Multi-Subject (Items 571–614)
+
+### 571. `[P2]` [FEATURE] [HIGH] ✅ Subjects & Purchases system — subjects, org_purchases, subject_teacher_access tables with RLS
+### 572. `[P2]` [FEATURE] [HIGH] ✅ Stripe Checkout integration — proper Products and Prices per subject (CS free, English £9.99 each)
+### 573. `[P2]` [FEATURE] [HIGH] ✅ Promo code "freemoney" validates against Stripe API
+### 574. `[P1]` [SECURITY] [CRITICAL] ✅ Stripe webhook uses service role key (was silently failing with anon client)
+### 575. `[P1]` [SECURITY] [CRITICAL] ✅ Cross-org isolation on teacher-feedback and admin/students API routes
+### 576. `[P1]` [SECURITY] [CRITICAL] ✅ Teacher dashboard no longer overfetches all profiles globally
+### 577. `[P1]` [AUTH] [CRITICAL] ✅ Signup flow: 3 clear role options (student, teacher, org_admin)
+### 578. `[P1]` [AUTH] [CRITICAL] ✅ Org_admin users can load teacher dashboard
+### 579. `[P1]` [AUTH] [CRITICAL] ✅ Signup errors no longer persist between steps
+### 580. `[P1]` [AUTH] [CRITICAL] ✅ Email field shown for org_admin signup
+### 581. `[P2]` [FEATURE] [HIGH] ✅ Org_admin role with Manage Subjects tab and teacher access controls
+### 582. `[P2]` [FEATURE] [HIGH] ✅ Teacher topics page filters by subject access with subject selector
+### 583. `[P2]` [FEATURE] [HIGH] ✅ AQA GCSE English Language (8700): 3 topics, 8 subtopics, 8 lessons
+### 584. `[P2]` [FEATURE] [HIGH] ✅ Edexcel GCSE English Language (1EN0): 3 topics, 8 subtopics, 8 lessons
+### 585. `[P2]` [FEATURE] [HIGH] ✅ Spec codes display dynamically (J277/01, 8700/1, 1EN0/01)
+### 586. `[P2]` [FEATURE] [HIGH] ✅ Subjects page reloads after Stripe checkout redirect
+### 587. `[P2]` [FEATURE] [HIGH] ✅ Auto-grant subject_teacher_access to purchaser after checkout
+### 588. `[P3]` [UI] [MEDIUM] ✅ Dark theme colors for lesson content (headings, paragraphs, code)
+### 589. `[P3]` [UI] [MEDIUM] ✅ Added .dark .text-gray-800 CSS override
+### 590. `[P2]` [API] [HIGH] ✅ GET /api/health endpoint added
+### 591. `[P2]` [FEATURE] [HIGH] Webhook endpoint: resend failed deliveries after fix
