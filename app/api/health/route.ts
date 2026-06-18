@@ -9,7 +9,7 @@ export async function GET() {
 
   try {
     const supabase = await createClient()
-    const { data, error } = await supabase.from('subjects').select('id', { count: 'exact', head: true }).limit(1)
+    const { error } = await supabase.from('subjects').select('id', { count: 'exact', head: true }).limit(1)
     if (error) {
       checks.database = `error: ${error.message}`
     } else {
