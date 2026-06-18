@@ -18,7 +18,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Public API routes - no auth required
-  if (pathname.startsWith('/api/signup') || pathname.startsWith('/api/lookup-username') || pathname.startsWith('/api/stripe-webhook')) {
+  if (pathname.startsWith('/api/signup') || pathname.startsWith('/api/lookup-username') || pathname.startsWith('/api/stripe-webhook') || pathname.startsWith('/api/health')) {
     return supabaseResponse
   }
 
