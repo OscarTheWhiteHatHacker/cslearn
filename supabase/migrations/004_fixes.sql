@@ -141,6 +141,22 @@ $$;
 -- org_admin users. These were applied directly via Management API.
 -- All policies below now allow role IN ('teacher', 'org_admin').
 
+-- SECURITY DEFINER helper: get all teacher/org_admin IDs in the current user's org.
+-- This bypasses RLS on profiles, which would otherwise block subqueries from
+-- student sessions (students can't read other profiles).
+CREATE OR REPLACE FUNCTION public.get_org_teacher_ids()
+RETURNS SETOF uuid
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+AS $$
+  SELECT id FROM public.profiles
+  WHERE organization_id = (
+    SELECT organization_id FROM public.profiles WHERE id = auth.uid()
+  )
+  AND role IN ('teacher', 'org_admin');
+$$;
+
 -- PROFILES
 -- Users can read their own profile
 CREATE POLICY "Users can read own profile" ON profiles
