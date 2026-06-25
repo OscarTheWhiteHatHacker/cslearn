@@ -136,6 +136,11 @@ AS $$
   SELECT organization_id FROM public.profiles WHERE id = auth.uid();
 $$;
 
+-- Correct the RLS policies that were not properly applied — the old policies used
+-- direct role = 'teacher' checks instead of the is_teacher() function, which excluded
+-- org_admin users. These were applied directly via Management API.
+-- All policies below now allow role IN ('teacher', 'org_admin').
+
 -- PROFILES
 -- Users can read their own profile
 CREATE POLICY "Users can read own profile" ON profiles
