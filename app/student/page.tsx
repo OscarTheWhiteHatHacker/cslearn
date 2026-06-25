@@ -79,6 +79,15 @@ async function getStudentData(): Promise<{
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     teacherIds = ((teachersInOrg as any[]) || []).map((t: any) => t.id)
+
+    // Also include org_admins
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: adminsInOrg } = await (supabase.from('profiles') as any)
+      .select('id')
+      .eq('role', 'org_admin')
+      .eq('organization_id', studentOrgId)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    teacherIds = teacherIds.concat(((adminsInOrg as any[]) || []).map((t: any) => t.id))
   }
 
   // Build query for question sets

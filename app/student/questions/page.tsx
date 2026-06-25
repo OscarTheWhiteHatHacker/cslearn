@@ -51,8 +51,17 @@ async function getStudentQuestionSets(): Promise<QuestionSetInfo[]> {
       .eq('role', 'teacher')
       .eq('organization_id', studentOrgId)
 
+    // Also include org_admins (they create content too)
+    const { data: adminsInOrg } = await s
+      .from('profiles')
+      .select('id')
+      .eq('role', 'org_admin')
+      .eq('organization_id', studentOrgId)
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     teacherIds = ((teachersInOrg as any[]) || []).map((t: any) => t.id)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    teacherIds = teacherIds.concat(((adminsInOrg as any[]) || []).map((t: any) => t.id))
   }
 
   // Build query for question sets
