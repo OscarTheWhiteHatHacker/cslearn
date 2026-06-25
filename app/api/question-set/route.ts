@@ -51,7 +51,6 @@ export async function GET(request: Request) {
     let query = (supabase.from('question_sets') as any)
       .select('*')
       .eq('subtopic_id', subtopicId)
-      .eq('teacher_id', user.id)
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1)
 
