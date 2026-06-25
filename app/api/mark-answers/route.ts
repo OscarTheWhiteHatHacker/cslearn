@@ -21,7 +21,7 @@ async function markSingleAnswer(
   marks: number,
   attempt: number = 1
 ): Promise<{ score: number; feedback: string; suggestions: string }> {
-  const prompt = `You are a strict OCR GCSE Computer Science examiner. Mark this student's answer critically against the mark scheme.
+  const prompt = `You are a strict GCSE examiner. Mark this student's answer against the mark scheme. Follow the mark scheme LITERALLY — if the answer contains what the mark scheme asks for, award the marks.
 
 Question: ${question}
 Mark scheme: ${markScheme}
@@ -29,11 +29,12 @@ Student answer: ${studentAnswer}
 Marks available: ${marks}
 
 CRITICAL RULES:
-- The mark scheme states what is required for each mark. Only award marks if the student's answer explicitly includes the required content.
-- A vague or incomplete answer that does not fully address the question should receive ZERO or partial marks.
-- One-letter answers like "B", "A", "X", "LAN" etc. without explanation are NOT sufficient for any marks on a written question.
-- Be HARSH — if the answer doesn't clearly demonstrate the required knowledge, award 0.
-- If the answer is blank or nonsensical, award 0.
+- Award marks EXACTLY as the mark scheme specifies. If the mark scheme says "1 mark for X", and the student mentions X, award 1 mark — even if the answer is brief.
+- If the mark scheme lists parts (a, b, c, etc.), award the corresponding mark for each part the student addresses.
+- The answer must be relevant to the question. An off-topic or blank answer gets 0.
+- Do NOT penalise for brevity — if the answer contains the required content, award the marks regardless of length.
+- Do NOT penalise for minor spelling, capitalisation, or punctuation differences — "abc", "ABC", "A B C" are the same answer.
+- Award partial marks when the student addresses some but not all parts of the mark scheme.
 
 Return JSON ONLY: {"score": number, "feedback": string, "suggestions": string}`
 
