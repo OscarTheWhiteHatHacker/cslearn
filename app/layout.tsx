@@ -13,7 +13,7 @@ export const metadata: Metadata = {
     template: '%s | CSLearn',
     default: 'CSLearn',
   },
-  description: 'Learn Computer Science interactively',
+  description: 'GCSE revision platform for Computer Science and English Language',
   manifest: '/manifest.json',
   icons: {
     icon: '/favicon.ico',
@@ -45,14 +45,21 @@ export default function RootLayout({
             <Suspense fallback={null}>
               <OfflineBanner />
             </Suspense>
-            <main className="min-h-screen bg-gray-50">
+            <main className="min-h-screen bg-gray-50 flex flex-col">
               <Suspense fallback={
                 <div className="flex items-center justify-center py-20">
                   <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-200 border-t-blue-600" />
                 </div>
               }>
-                {children}
+                <div className="flex-1">
+                  {children}
+                </div>
               </Suspense>
+              <footer className="border-t border-gray-200 bg-white/80 py-3 px-4 text-center dark:border-gray-700 dark:bg-gray-900/80">
+                <p className="text-xs text-gray-400 dark:text-gray-500">
+                  Unofficial educational resource. Not affiliated with or endorsed by OCR, AQA, or Pearson Edexcel.
+                </p>
+              </footer>
             </main>
           </SupabaseProvider>
         </ThemeProvider>
