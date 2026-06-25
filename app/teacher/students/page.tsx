@@ -490,7 +490,7 @@ export default function ManageStudentsPage() {
             {filteredStudents.map((student) => (
               <div
                 key={student.id}
-                className="block px-6 py-4 transition-all hover:bg-gray-50 dark:hover:bg-gray-700"
+                className="block px-6 py-4 transition-all hover:bg-blue-50/50 dark:hover:bg-gray-700"
               >
                 <div className="flex items-center justify-between mb-2">
                   <button
