@@ -167,7 +167,7 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json()
-  const { id } = body
+  const { id, questions } = body
 
   if (!id) {
     return NextResponse.json({ error: 'Missing id' }, { status: 400 })
@@ -190,9 +190,29 @@ export async function POST(request: Request) {
 
   const newStatus = set.status === 'published' ? 'draft' : 'published'
 
+  // Build update payload: always toggle status, optionally save questions
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const updatePayload: any = { status: newStatus }
+  if (questions && Array.isArray(questions)) {
+    // Validate questions
+    for (let i = 0; i < questions.length; i++) {
+      const q = questions[i]
+      if (!q.question || typeof q.question !== 'string') {
+        return NextResponse.json({ error: `Question ${i} missing valid 'question' field` }, { status: 400 })
+      }
+      if (!q.marks || typeof q.marks !== 'number') {
+        return NextResponse.json({ error: `Question ${i} missing valid 'marks' field` }, { status: 400 })
+      }
+      if (!q.mark_scheme || typeof q.mark_scheme !== 'string') {
+        return NextResponse.json({ error: `Question ${i} missing valid 'mark_scheme' field` }, { status: 400 })
+      }
+    }
+    updatePayload.questions_json = questions
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error: updateError } = await (supabase.from('question_sets') as any)
-    .update({ status: newStatus })
+    .update(updatePayload)
     .eq('id', id)
 
   if (updateError) {

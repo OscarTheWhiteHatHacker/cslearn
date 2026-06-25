@@ -173,6 +173,42 @@ export default function AssignQuestionsButton({ subtopicId, lessonIndex }: Assig
   const handlePublish = async (id: string, currentlyPublished: boolean) => {
     setLoading(true)
     setError('')
+
+    // If we have unsaved edits in the editor, save them first
+    if (editingSet && editingSet.id === id && editingQuestions.length > 0) {
+      // Validate before saving
+      for (let i = 0; i < editingQuestions.length; i++) {
+        const q = editingQuestions[i]
+        if (!q.question.trim()) {
+          setError(`Question ${i + 1} has no question text`)
+          setLoading(false)
+          return
+        }
+        if (!q.mark_scheme.trim()) {
+          setError(`Question ${i + 1} has no mark scheme`)
+          setLoading(false)
+          return
+        }
+        if (q.marks < 1) {
+          setError(`Question ${i + 1} must have at least 1 mark`)
+          setLoading(false)
+          return
+        }
+      }
+
+      // Save edits via PATCH
+      const saveRes = await fetch('/api/question-set', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, questions: editingQuestions }),
+      })
+      const saveData = await saveRes.json()
+      if (!saveRes.ok) {
+        throw new Error(saveData.error || 'Failed to save edits before publishing')
+      }
+    }
+
+    // Now toggle publish status
     try {
       const response = await fetch('/api/question-set', {
         method: 'POST',
