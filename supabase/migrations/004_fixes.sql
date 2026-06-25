@@ -122,7 +122,7 @@ SECURITY DEFINER
 AS $$
   SELECT EXISTS (
     SELECT 1 FROM public.profiles
-    WHERE id = auth.uid() AND role = 'teacher'
+    WHERE id = auth.uid() AND role IN ('teacher', 'org_admin')
   );
 $$;
 
