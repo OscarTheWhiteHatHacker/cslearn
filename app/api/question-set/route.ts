@@ -88,7 +88,7 @@ export async function PATCH(request: Request) {
     .limit(1)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const profile = (profileList as any[] | null)?.[0]
-  if (!profile || profile.role !== 'teacher') {
+  if (!profile || (profile.role !== 'teacher' && profile.role !== 'org_admin')) {
     return NextResponse.json({ error: 'Only teachers can edit question sets' }, { status: 403 })
   }
 
@@ -164,7 +164,7 @@ export async function POST(request: Request) {
     .limit(1)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const profile = (profileList as any[] | null)?.[0]
-  if (!profile || profile.role !== 'teacher') {
+  if (!profile || (profile.role !== 'teacher' && profile.role !== 'org_admin')) {
     return NextResponse.json({ error: 'Only teachers can publish question sets' }, { status: 403 })
   }
 
@@ -224,7 +224,7 @@ export async function DELETE(request: Request) {
     .limit(1)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const profile = (profileList as any[] | null)?.[0]
-  if (!profile || profile.role !== 'teacher') {
+  if (!profile || (profile.role !== 'teacher' && profile.role !== 'org_admin')) {
     return NextResponse.json({ error: 'Only teachers can delete question sets' }, { status: 403 })
   }
 

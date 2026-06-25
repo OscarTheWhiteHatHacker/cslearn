@@ -22,8 +22,8 @@ export async function POST(request: Request) {
     .limit(1)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const profile = (profileList as any[] | null)?.[0]
-  if (!profile || profile.role !== 'teacher') {
-    return NextResponse.json({ error: 'Only teachers can manage releases' }, { status: 403 })
+  if (!profile || (profile.role !== 'teacher' && profile.role !== 'org_admin')) {
+    return NextResponse.json({ error: 'Only teachers can manage lessons' }, { status: 403 })
   }
 
   const body = await request.json()

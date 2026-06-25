@@ -127,8 +127,8 @@ export async function POST(request: Request) {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const profile = (profileList as any[] | null)?.[0]
-  if (!profile || profile.role !== 'teacher') {
-    return NextResponse.json({ error: 'Only teachers can generate question sets' }, { status: 403 })
+  if (!profile || (profile.role !== 'teacher' && profile.role !== 'org_admin')) {
+    return NextResponse.json({ error: 'Only teachers can generate questions' }, { status: 403 })
   }
 
   const body = await request.json()

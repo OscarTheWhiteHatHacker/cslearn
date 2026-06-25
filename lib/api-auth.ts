@@ -32,7 +32,7 @@ export async function requireTeacher() {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const profile = (profileList as any[] | null)?.[0]
-  if (!profile || profile.role !== 'teacher') {
+  if (!profile || (profile.role !== 'teacher' && profile.role !== 'org_admin')) {
     return { user: null, errorResponse: NextResponse.json({ error: 'Forbidden: teachers only' }, { status: 403 }) }
   }
 
