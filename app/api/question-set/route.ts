@@ -128,9 +128,8 @@ export async function PATCH(request: Request) {
   if (set.teacher_id !== user.id) {
     return NextResponse.json({ error: 'Not your question set' }, { status: 403 })
   }
-  if (set.status !== 'draft') {
-    return NextResponse.json({ error: 'Can only edit draft question sets' }, { status: 400 })
-  }
+
+  // Update questions (works for both draft and published)
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error: updateError } = await (supabase.from('question_sets') as any)
