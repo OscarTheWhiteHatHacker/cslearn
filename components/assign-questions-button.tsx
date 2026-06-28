@@ -105,6 +105,13 @@ export default function AssignQuestionsButton({ subtopicId, lessonIndex, orgId: 
     setLoadingStudents(false)
   }, [resolvedOrgId])
 
+  // Retry loading students once resolvedOrgId becomes available
+  useEffect(() => {
+    if (editingSet && resolvedOrgId) {
+      loadStudentAssignment(editingSet.id)
+    }
+  }, [resolvedOrgId])
+
   const startEditing = async (set: QuestionSet) => {
     setEditingSet(set)
     setEditingQuestions([...set.questions_json])
