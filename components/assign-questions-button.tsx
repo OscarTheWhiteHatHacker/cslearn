@@ -282,6 +282,13 @@ export default function AssignQuestionsButton({ subtopicId, lessonIndex, orgId }
       const parsedQuestions = (data.questionSet?.questions_json || []) as Question[]
       setEditingQuestions(parsedQuestions)
       setEditingSet(data.questionSet)
+      // Reset student assignment state
+      setReleaseAll(true)
+      setAssignedStudentIds(new Set())
+      setSearchQuery('')
+      if (orgId) {
+        await loadStudentAssignment(data.questionSet.id)
+      }
       setSuccess('Questions generated! Review and edit them below, then save.')
       await loadQuestionSets()
     } catch (err) {
@@ -395,7 +402,7 @@ export default function AssignQuestionsButton({ subtopicId, lessonIndex, orgId }
           </button>
 
           {/* Student assignment checklist */}
-          {orgId && (
+          {orgId ? (
             <div className="border-t border-gray-200 pt-4">
               <h4 className="text-sm font-semibold text-gray-900 mb-3">Assign to students</h4>
               {loadingStudents ? (
@@ -409,10 +416,8 @@ export default function AssignQuestionsButton({ subtopicId, lessonIndex, orgId }
                     <input type="checkbox" checked={releaseAll}
                       onChange={() => {
                         if (releaseAll) {
-                          // Switching from all → specific with nothing selected
                           setReleaseAll(false)
                         } else {
-                          // Switching from specific → all
                           setReleaseAll(true)
                           setAssignedStudentIds(new Set())
                         }
@@ -425,7 +430,6 @@ export default function AssignQuestionsButton({ subtopicId, lessonIndex, orgId }
 
                   {!releaseAll && (
                     <>
-                      {/* Search */}
                       <div className="relative ml-7">
                         <svg className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -434,10 +438,10 @@ export default function AssignQuestionsButton({ subtopicId, lessonIndex, orgId }
                           onChange={(e) => setSearchQuery(e.target.value)}
                           className="block w-full rounded-md border border-gray-300 pl-9 pr-3 py-1.5 text-xs text-gray-900 placeholder-gray-400 focus:border-accent focus:outline-none focus:ring-accent" />
                       </div>
-
-                      {/* Student checkboxes */}
                       <div className="ml-7 max-h-48 space-y-0.5 overflow-y-auto rounded-lg border border-gray-200 p-1">
-                        {filteredStudents.length === 0 ? (
+                        {students.length === 0 ? (
+                          <p className="py-4 text-center text-xs text-gray-400">No students in your organisation</p>
+                        ) : filteredStudents.length === 0 ? (
                           <p className="py-4 text-center text-xs text-gray-400">No students match your search</p>
                         ) : (
                           filteredStudents.map((student) => (
@@ -453,7 +457,6 @@ export default function AssignQuestionsButton({ subtopicId, lessonIndex, orgId }
                           ))
                         )}
                       </div>
-
                       <p className="text-xs text-gray-500 ml-7">
                         {assignedStudentIds.size} of {students.length} selected
                       </p>
@@ -461,6 +464,10 @@ export default function AssignQuestionsButton({ subtopicId, lessonIndex, orgId }
                   )}
                 </div>
               )}
+            </div>
+          ) : editingSet.status === 'draft' && (
+            <div className="border-t border-gray-200 pt-4">
+              <p className="text-xs text-gray-500">No organisation set — questions will be visible to all students.</p>
             </div>
           )}
 
