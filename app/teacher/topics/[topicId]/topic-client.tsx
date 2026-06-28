@@ -183,10 +183,20 @@ export default function TopicClient({ topicData }: any) {
                         <section>
                           <h4 className="text-sm font-semibold text-gray-900 mb-2">Examples</h4>
                           <div className="space-y-2">
-                            {(content.examples as string[]).map((example: string, i: number) => (
+                            {(content.examples as any[]).map((example: any, i: number) => (
                               <div key={i} className="rounded-md bg-amber-50 border border-amber-200 p-3">
                                 <p className="text-xs font-medium text-amber-800 mb-0.5">Example {i + 1}</p>
-                                <p className="text-xs text-amber-900">{example}</p>
+                                {typeof example === 'string' ? (
+                                  <p className="text-xs text-amber-900">{example}</p>
+                                ) : (
+                                  <div className="text-xs text-amber-900 space-y-1">
+                                    {example.question && <p><span className="font-medium">Question:</span> {example.question}</p>}
+                                    {example.answer && <p><span className="font-medium">Answer:</span> {example.answer}</p>}
+                                    {example.scenario && <p><span className="font-medium">Scenario:</span> {example.scenario}</p>}
+                                    {example.explanation && <p><span className="font-medium">Explanation:</span> {example.explanation}</p>}
+                                    {example.code && <pre className="mt-1 rounded bg-amber-100 p-2 text-xs font-mono whitespace-pre-wrap">{example.code}</pre>}
+                                  </div>
+                                )}
                               </div>
                             ))}
                           </div>

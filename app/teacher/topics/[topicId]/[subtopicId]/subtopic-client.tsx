@@ -133,14 +133,24 @@ export default function SubtopicClient(props: any) {
                 </ul>
               </section>
 
-              {(content.examples as string[])?.length > 0 && (
+              {(content.examples as any[])?.length > 0 && (
                 <section>
                   <h3 className="text-base font-semibold text-gray-900 mb-3">Examples</h3>
                   <div className="space-y-3">
-                    {(content.examples as string[]).map((example: string, i: number) => (
+                    {(content.examples as any[]).map((example: any, i: number) => (
                       <div key={i} className="rounded-md bg-amber-50 border border-amber-200 p-4">
                         <p className="text-xs font-medium text-amber-800 mb-1">Example {i + 1}</p>
-                        <p className="text-sm text-amber-900">{example}</p>
+                        {typeof example === 'string' ? (
+                          <p className="text-sm text-amber-900">{example}</p>
+                        ) : (
+                          <div className="text-sm text-amber-900 space-y-1">
+                            {example.question && <p><span className="font-medium">Question:</span> {example.question}</p>}
+                            {example.answer && <p><span className="font-medium">Answer:</span> {example.answer}</p>}
+                            {example.scenario && <p><span className="font-medium">Scenario:</span> {example.scenario}</p>}
+                            {example.explanation && <p><span className="font-medium">Explanation:</span> {example.explanation}</p>}
+                            {example.code && <pre className="mt-1 rounded bg-amber-100 p-2 text-xs font-mono whitespace-pre-wrap">{example.code}</pre>}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
