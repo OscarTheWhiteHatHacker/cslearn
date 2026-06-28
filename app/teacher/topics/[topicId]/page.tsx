@@ -46,9 +46,10 @@ async function getTopic(topicId: string) {
     lessonsBySubtopic[l.subtopic_id].push(l)
   }
 
-  // Check release status
+  // Check release status and get org info
   const { data: { user } } = await supabase.auth.getUser()
   let lessonReleaseIds: string[] = []
+  let orgId: string | null = null
   if (user) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: released } = await (supabase.from('released_lessons') as any)
@@ -56,6 +57,15 @@ async function getTopic(topicId: string) {
       .eq('teacher_id', user.id)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     lessonReleaseIds = ((released as any[]) || []).map((r: any) => r.lesson_id)
+
+    // Get org ID for student picker
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: profileRows } = await (supabase.from('profiles') as any)
+      .select('organization_id')
+      .eq('id', user.id)
+      .limit(1)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    orgId = ((profileRows as any[] | null)?.[0])?.organization_id || null
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -69,6 +79,7 @@ async function getTopic(topicId: string) {
     ...topic,
     subtopics: enriched,
     lessonReleaseIds,
+    orgId,
   }
 }
 

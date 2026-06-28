@@ -11,7 +11,7 @@ export default function TopicClient({ topicData }: any) {
   const [expandedSubtopic, setExpandedSubtopic] = useState<string | null>(null)
   const [selectedLesson, setSelectedLesson] = useState<Record<string, number>>({})
 
-  const { title, component, subtopics, lessonReleaseIds } = topicData || {}
+  const { title, component, subtopics, lessonReleaseIds, orgId } = topicData || {}
   const releaseSet = new Set((lessonReleaseIds as string[]) || [])
 
   const toggleSubtopic = (subtopicId: string) => {
@@ -113,6 +113,7 @@ export default function TopicClient({ topicData }: any) {
                               <LessonReleaseToggle
                                 lessonId={lesson.id}
                                 initiallyReleased={isReleased}
+                                orgId={orgId}
                               />
                             </div>
                           </button>

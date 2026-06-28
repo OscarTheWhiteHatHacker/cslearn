@@ -7,7 +7,7 @@ import AssignQuestionsButton from '@/components/assign-questions-button'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export default function SubtopicClient(props: any) {
-  const { subtopic, topic, lessons, releasedLessonIds } = props
+  const { subtopic, topic, lessons, releasedLessonIds, orgId } = props
   const releasedSet = new Set((releasedLessonIds as string[]) || [])
 
   const [selectedIdx, setSelectedIdx] = useState(0)
@@ -75,6 +75,7 @@ export default function SubtopicClient(props: any) {
                     <LessonReleaseToggle
                       lessonId={lesson.id}
                       initiallyReleased={isReleased}
+                      orgId={orgId}
                     />
                   </div>
                 </button>

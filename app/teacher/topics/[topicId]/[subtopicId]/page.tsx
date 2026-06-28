@@ -44,6 +44,7 @@ async function getPageData(subtopicId: string, topicId: string): Promise<any> {
   const lessons: Lesson[] = (lessonsResult.data as Lesson[]) || []
 
   let releasedLessonIds: any = []
+  let orgId: string | null = null
 
   if (user) {
     const [lessonIdsResult] = await Promise.all([
@@ -52,9 +53,18 @@ async function getPageData(subtopicId: string, topicId: string): Promise<any> {
     ])
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     releasedLessonIds = (lessonIdsResult.data as any[] || []).map((r: any) => r.lesson_id)
+
+    // Get org ID for student picker
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: profileRows } = await (supabase.from('profiles') as any)
+      .select('organization_id')
+      .eq('id', user.id)
+      .limit(1)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    orgId = ((profileRows as any[] | null)?.[0])?.organization_id || null
   }
 
-  return { subtopic, topic, lessons, releasedLessonIds, subtopicId }
+  return { subtopic, topic, lessons, releasedLessonIds, subtopicId, orgId }
 }
 
 export default async function TeacherSubtopicPage({

@@ -103,18 +103,21 @@ export type Database = {
           id: string
           subtopic_id: string
           teacher_id: string
+          student_id: string | null
           released_at: string
         }
         Insert: {
           id?: string
           subtopic_id: string
           teacher_id: string
+          student_id?: string | null
           released_at?: string
         }
         Update: {
           id?: string
           subtopic_id?: string
           teacher_id?: string
+          student_id?: string | null
           released_at?: string
         }
       }
