@@ -31,7 +31,7 @@ interface AssignQuestionsButtonProps {
   orgId?: string
 }
 
-export default function AssignQuestionsButton({ subtopicId, lessonIndex, orgId }: AssignQuestionsButtonProps) {
+export default function AssignQuestionsButton({ subtopicId, lessonIndex, orgId: propOrgId }: AssignQuestionsButtonProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -47,6 +47,7 @@ export default function AssignQuestionsButton({ subtopicId, lessonIndex, orgId }
   const [releaseAll, setReleaseAll] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [loadingStudents, setLoadingStudents] = useState(false)
+  const resolvedOrgId = useResolvedOrgId(propOrgId)
 
   useEffect(() => {
     loadQuestionSets()
@@ -72,20 +73,16 @@ export default function AssignQuestionsButton({ subtopicId, lessonIndex, orgId }
   }
 
   const loadStudentAssignment = useCallback(async (setId: string) => {
-    if (!orgId) return
+    if (!resolvedOrgId) return
     setLoadingStudents(true)
-
     const supabase = createClient()
-    // Load students
     const { data: studentData } = await (supabase as any)
       .from('profiles')
       .select('id, full_name, username')
       .eq('role', 'student')
-      .eq('organization_id', orgId)
+      .eq('organization_id', resolvedOrgId)
       .order('full_name', { ascending: true })
     setStudents((studentData || []) as StudentInfo[])
-
-    // Load current assignment state
     try {
       const res = await fetch(`/api/question-set?id=${setId}&releaseStatus=true`)
       if (res.ok) {
@@ -106,7 +103,7 @@ export default function AssignQuestionsButton({ subtopicId, lessonIndex, orgId }
       setAssignedStudentIds(new Set())
     }
     setLoadingStudents(false)
-  }, [orgId])
+  }, [resolvedOrgId])
 
   const startEditing = async (set: QuestionSet) => {
     setEditingSet(set)
@@ -114,7 +111,7 @@ export default function AssignQuestionsButton({ subtopicId, lessonIndex, orgId }
     setError('')
     setSuccess('')
     setShowDrafts(false)
-    if (orgId) {
+    if (resolvedOrgId) {
       await loadStudentAssignment(set.id)
     }
   }
@@ -181,7 +178,6 @@ export default function AssignQuestionsButton({ subtopicId, lessonIndex, orgId }
     setError('')
     setSuccess('')
     try {
-      // Save edits
       const saveRes = await fetch('/api/question-set', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -189,8 +185,6 @@ export default function AssignQuestionsButton({ subtopicId, lessonIndex, orgId }
       })
       const saveData = await saveRes.json()
       if (!saveRes.ok) throw new Error(saveData.error || 'Failed to save edits')
-
-      // Publish with assignment
       const studentIds = releaseAll ? [] : Array.from(assignedStudentIds)
       const response = await fetch('/api/question-set', {
         method: 'POST',
@@ -199,7 +193,6 @@ export default function AssignQuestionsButton({ subtopicId, lessonIndex, orgId }
       })
       const data = await response.json()
       if (!response.ok) throw new Error(data.error || 'Failed to publish')
-
       setSuccess(releaseAll ? 'Saved and assigned to all students!' : `Saved and assigned to ${studentIds.length} student(s)!`)
       setEditingSet(null)
       setEditingQuestions([])
@@ -282,11 +275,10 @@ export default function AssignQuestionsButton({ subtopicId, lessonIndex, orgId }
       const parsedQuestions = (data.questionSet?.questions_json || []) as Question[]
       setEditingQuestions(parsedQuestions)
       setEditingSet(data.questionSet)
-      // Reset student assignment state
       setReleaseAll(true)
       setAssignedStudentIds(new Set())
       setSearchQuery('')
-      if (orgId) {
+      if (resolvedOrgId) {
         await loadStudentAssignment(data.questionSet.id)
       }
       setSuccess('Questions generated! Review and edit them below, then save.')
@@ -306,7 +298,6 @@ export default function AssignQuestionsButton({ subtopicId, lessonIndex, orgId }
 
   return (
     <div className="space-y-4">
-      {/* Generate button */}
       <div className="flex items-center gap-2">
         <button onClick={handleGenerate} disabled={loading}
           className="inline-flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all">
@@ -326,7 +317,6 @@ export default function AssignQuestionsButton({ subtopicId, lessonIndex, orgId }
       {error && <div className="rounded-md bg-red-50 border border-red-200 p-3"><p className="text-sm text-red-700">{error}</p></div>}
       {success && <div className="rounded-md bg-green-50 border border-green-200 p-3"><p className="text-sm text-green-700">{success}</p></div>}
 
-      {/* Existing sets list */}
       {showDrafts && !editingSet && (
         <div className="space-y-3 mt-4">
           {publishedSets.map((set) => (
@@ -356,7 +346,6 @@ export default function AssignQuestionsButton({ subtopicId, lessonIndex, orgId }
         </div>
       )}
 
-      {/* Editing panel */}
       {editingSet && (
         <div className="mt-6 space-y-4 border border-gray-200 rounded-lg bg-white p-6 shadow-sm">
           <div className="flex items-center justify-between">
@@ -366,7 +355,6 @@ export default function AssignQuestionsButton({ subtopicId, lessonIndex, orgId }
             </span>
           </div>
 
-          {/* Questions */}
           <div className="space-y-4">
             {editingQuestions.map((q, i) => (
               <div key={i} className="rounded-lg border border-gray-200 p-4 space-y-3">
@@ -402,7 +390,7 @@ export default function AssignQuestionsButton({ subtopicId, lessonIndex, orgId }
           </button>
 
           {/* Student assignment checklist */}
-          {orgId ? (
+          {resolvedOrgId ? (
             <div className="border-t border-gray-200 pt-4">
               <h4 className="text-sm font-semibold text-gray-900 mb-3">Assign to students</h4>
               {loadingStudents ? (
@@ -411,7 +399,6 @@ export default function AssignQuestionsButton({ subtopicId, lessonIndex, orgId }
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {/* All students toggle */}
                   <label className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 hover:bg-gray-50 transition-colors">
                     <input type="checkbox" checked={releaseAll}
                       onChange={() => {
@@ -457,17 +444,15 @@ export default function AssignQuestionsButton({ subtopicId, lessonIndex, orgId }
                           ))
                         )}
                       </div>
-                      <p className="text-xs text-gray-500 ml-7">
-                        {assignedStudentIds.size} of {students.length} selected
-                      </p>
+                      <p className="text-xs text-gray-500 ml-7">{assignedStudentIds.size} of {students.length} selected</p>
                     </>
                   )}
                 </div>
               )}
             </div>
-          ) : editingSet.status === 'draft' && (
+          ) : (
             <div className="border-t border-gray-200 pt-4">
-              <p className="text-xs text-gray-500">No organisation set — questions will be visible to all students.</p>
+              <p className="text-xs text-gray-500">Loading organisation...</p>
             </div>
           )}
 
@@ -502,4 +487,29 @@ export default function AssignQuestionsButton({ subtopicId, lessonIndex, orgId }
       )}
     </div>
   )
+}
+
+/** Fetches orgId from props, or falls back to a client-side Supabase query. */
+function useResolvedOrgId(propOrgId: string | undefined): string | null {
+  const [oid, setOid] = useState<string | null>(propOrgId || null)
+
+  useEffect(() => {
+    if (propOrgId) {
+      setOid(propOrgId)
+      return
+    }
+    let cancelled = false
+    const supabase = createClient()
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user || cancelled) return
+      ;(supabase as any).from('profiles').select('organization_id').eq('id', user.id).limit(1)
+        .then(({ data }: any) => {
+          const orgId = (data?.[0] as any)?.organization_id
+          if (orgId && !cancelled) setOid(orgId)
+        })
+    })
+    return () => { cancelled = true }
+  }, [propOrgId])
+
+  return oid
 }
