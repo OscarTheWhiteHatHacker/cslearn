@@ -28,7 +28,7 @@ export default function SubtopicClient(props: any) {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <AssignQuestionsButton subtopicId={subtopic.id} lessonIndex={selectedIdx} />
+            <AssignQuestionsButton subtopicId={subtopic.id} lessonIndex={selectedIdx} orgId={orgId} />
           </div>
         </div>
       </div>

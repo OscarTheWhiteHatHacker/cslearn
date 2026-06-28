@@ -64,6 +64,19 @@ async function getStudentQuestionSets(): Promise<QuestionSetInfo[]> {
     teacherIds = teacherIds.concat(((adminsInOrg as any[]) || []).map((t: any) => t.id))
   }
 
+  // Get released question sets visible to this student
+  let releasedQuery = s
+    .from('released_question_sets')
+    .select('question_set_id')
+
+  if (teacherIds.length > 0) {
+    releasedQuery = releasedQuery.in('teacher_id', teacherIds)
+  }
+
+  const { data: releasedRows } = await releasedQuery
+  const releasedIds: string[] = (releasedRows || []).map((r: any) => r.question_set_id)
+  if (releasedIds.length === 0) return []
+
   // Build query for question sets
   let qsQuery = s
     .from('question_sets')
@@ -76,6 +89,7 @@ async function getStudentQuestionSets(): Promise<QuestionSetInfo[]> {
         )
       )
     `)
+    .in('id', releasedIds)
     .order('created_at', { ascending: false })
 
   if (teacherIds.length > 0) {

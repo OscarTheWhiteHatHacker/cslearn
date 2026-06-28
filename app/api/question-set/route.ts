@@ -11,7 +11,7 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url)
-  const id = searchParams.get('id')
+  const id = searchParams.get('id') || searchParams.get('contentId')
   const subtopicId = searchParams.get('subtopicId')
   const status = searchParams.get('status')
   const limit = Math.min(Math.max(parseInt(searchParams.get('limit') || '50', 10) || 50, 1), 200)
@@ -40,9 +40,45 @@ export async function GET(request: Request) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const subtopic = (subtopicList as any[] | null)?.[0]
 
+    // Fetch release status
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: releaseRows } = await (supabase.from('released_question_sets') as any)
+      .select('student_id')
+      .eq('question_set_id', id)
+
+    const rRows = (releaseRows || []) as { student_id: string | null }[]
+    const hasNullRow = rRows.some((r) => r.student_id === null)
+    const rStudentIds = rRows
+      .filter((r) => r.student_id !== null)
+      .map((r) => r.student_id as string)
+
     return NextResponse.json({
       questionSet,
       subtopicTitle: subtopic?.title || null,
+      released: rRows.length > 0,
+      releaseAll: hasNullRow,
+      studentIds: rStudentIds,
+    })
+  }
+
+  const releaseStatus = searchParams.get('releaseStatus')
+  if (releaseStatus === 'true' && id) {
+    // Return release status for the modal
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: rows } = await (supabase.from('released_question_sets') as any)
+      .select('student_id')
+      .eq('question_set_id', id)
+
+    const releaseRows = (rows || []) as { student_id: string | null }[]
+    const hasNullRow = releaseRows.some((r) => r.student_id === null)
+    const studentIds = releaseRows
+      .filter((r) => r.student_id !== null)
+      .map((r) => r.student_id as string)
+
+    return NextResponse.json({
+      released: releaseRows.length > 0,
+      releaseAll: hasNullRow,
+      studentIds,
     })
   }
 
@@ -167,16 +203,19 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json()
-  const { id, questions } = body
+  const { id, questions, studentIds, releaseAll } = body
 
-  if (!id) {
+  // Accept 'lessonId' as alias for 'id' (used by StudentReleaseModal)
+  const setId = id || body.lessonId
+
+  if (!setId) {
     return NextResponse.json({ error: 'Missing id' }, { status: 400 })
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: existing } = await (supabase.from('question_sets') as any)
     .select('status, teacher_id')
-    .eq('id', id)
+    .eq('id', setId)
     .limit(1)
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -213,10 +252,45 @@ export async function POST(request: Request) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error: updateError } = await (supabase.from('question_sets') as any)
     .update(updatePayload)
-    .eq('id', id)
+    .eq('id', setId)
 
   if (updateError) {
     return NextResponse.json({ error: `Failed to ${newStatus} question set`, details: updateError.message }, { status: 500 })
+  }
+
+  // Manage released_question_sets entries
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const s: any = supabase
+
+  if (newStatus === 'published') {
+    // Publishing: create release entries
+    const isReleaseAll = releaseAll !== false && (!studentIds || studentIds.length === 0)
+
+    // Remove existing release entries
+    await (s.from('released_question_sets') as any)
+      .delete()
+      .eq('question_set_id', setId)
+      .eq('teacher_id', user.id)
+
+    if (isReleaseAll) {
+      // Release to all students
+      await (s.from('released_question_sets') as any)
+        .insert({ question_set_id: setId, teacher_id: user.id, student_id: null })
+    } else if (studentIds && Array.isArray(studentIds) && studentIds.length > 0) {
+      // Release to specific students
+      const rowsToInsert = studentIds.map((sid: string) => ({
+        question_set_id: setId,
+        teacher_id: user.id,
+        student_id: sid,
+      }))
+      await (s.from('released_question_sets') as any).insert(rowsToInsert)
+    }
+  } else {
+    // Unpublishing: remove all release entries
+    await (s.from('released_question_sets') as any)
+      .delete()
+      .eq('question_set_id', setId)
+      .eq('teacher_id', user.id)
   }
 
   return NextResponse.json({ success: true, status: newStatus })

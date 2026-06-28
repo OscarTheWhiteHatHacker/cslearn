@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { formatDate } from '@/lib/formatters'
+import StudentReleaseModal from './student-release-modal'
 
 interface Question {
   question: string
@@ -21,9 +22,10 @@ interface QuestionSet {
 interface AssignQuestionsButtonProps {
   subtopicId: string
   lessonIndex?: number
+  orgId?: string
 }
 
-export default function AssignQuestionsButton({ subtopicId, lessonIndex }: AssignQuestionsButtonProps) {
+export default function AssignQuestionsButton({ subtopicId, lessonIndex, orgId }: AssignQuestionsButtonProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -32,6 +34,7 @@ export default function AssignQuestionsButton({ subtopicId, lessonIndex }: Assig
   const [editingSet, setEditingSet] = useState<QuestionSet | null>(null)
   const [editingQuestions, setEditingQuestions] = useState<Question[]>([])
   const [showDrafts, setShowDrafts] = useState(false)
+  const [showStudentModal, setShowStudentModal] = useState(false)
 
   // Fetch existing question sets on mount
   useEffect(() => {
@@ -170,7 +173,23 @@ export default function AssignQuestionsButton({ subtopicId, lessonIndex }: Assig
     }
   }
 
-  const handlePublish = async (id: string, currentlyPublished: boolean) => {
+  const handlePublishClick = (id: string, currentlyPublished: boolean) => {
+    if (orgId && !currentlyPublished) {
+      // Show modal for per-student assignment
+      setShowStudentModal(true)
+      // Set editing set to the one being published
+      const target = [...draftSets, ...publishedSets].find(s => s.id === id)
+      if (target) {
+        setEditingSet(target)
+        setEditingQuestions([...target.questions_json])
+      }
+    } else {
+      // Direct toggle (unpublish or no org context)
+      handlePublish(id, currentlyPublished, true, [])
+    }
+  }
+
+  const handlePublish = async (id: string, currentlyPublished: boolean, releaseAll: boolean, studentIds: string[]) => {
     setLoading(true)
     setError('')
 
@@ -208,12 +227,16 @@ export default function AssignQuestionsButton({ subtopicId, lessonIndex }: Assig
       }
     }
 
-    // Now toggle publish status
+    // Now toggle publish status with per-student data
     try {
       const response = await fetch('/api/question-set', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id }),
+        body: JSON.stringify({
+          id,
+          releaseAll,
+          studentIds: releaseAll ? [] : studentIds,
+        }),
       })
 
       const data = await response.json()
@@ -221,7 +244,14 @@ export default function AssignQuestionsButton({ subtopicId, lessonIndex }: Assig
         throw new Error(data.error || 'Failed to update')
       }
 
-      setSuccess(currentlyPublished ? 'Questions unassigned from students.' : 'Questions assigned to students!')
+      const published = data.status === 'published'
+      setSuccess(
+        published
+          ? releaseAll
+            ? 'Questions assigned to all students!'
+            : `Questions assigned to ${studentIds.length} student(s)!`
+          : 'Questions unassigned from students.'
+      )
       setEditingSet(null)
       setEditingQuestions([])
       await loadQuestionSets()
@@ -317,7 +347,7 @@ export default function AssignQuestionsButton({ subtopicId, lessonIndex }: Assig
                 </div>
               </div>
               <button
-                onClick={() => handlePublish(set.id, true)}
+                onClick={() => handlePublishClick(set.id, true)}
                 className="text-sm text-amber-600 hover:text-amber-800 font-medium"
               >
                 Unassign
@@ -358,14 +388,14 @@ export default function AssignQuestionsButton({ subtopicId, lessonIndex }: Assig
       )}
 
       {/* Editing panel */}
-      {editingSet && (
+      {editingSet && !showStudentModal && (
         <div className="mt-6 space-y-4 border border-gray-200 rounded-lg bg-white p-6 shadow-sm">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-900">
               Edit Questions ({editingQuestions.length})
             </h3>
             <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
-              Draft
+              {editingSet.status === 'published' ? 'Published' : 'Draft'}
             </span>
           </div>
 
@@ -438,11 +468,11 @@ export default function AssignQuestionsButton({ subtopicId, lessonIndex }: Assig
               {loading ? 'Saving...' : 'Save Changes'}
             </button>
             <button
-              onClick={() => handlePublish(editingSet.id, false)}
+              onClick={() => handlePublishClick(editingSet.id, editingSet.status === 'published')}
               disabled={loading || editingQuestions.length === 0}
               className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50 transition-all"
             >
-              {loading ? 'Working...' : 'Assign to Students'}
+              {loading ? 'Working...' : editingSet.status === 'published' ? 'Unassign' : 'Assign to Students'}
             </button>
             <button
               onClick={cancelEditing}
@@ -452,6 +482,27 @@ export default function AssignQuestionsButton({ subtopicId, lessonIndex }: Assig
             </button>
           </div>
         </div>
+      )}
+
+      {/* Student release modal */}
+      {showStudentModal && editingSet && orgId && (
+        <StudentReleaseModal
+          apiEndpoint="/api/question-set"
+          contentId={editingSet.id}
+          orgId={orgId}
+          onClose={() => {
+            setShowStudentModal(false)
+            setEditingSet(null)
+            setEditingQuestions([])
+          }}
+          onSaved={() => {
+            // After modal saves, refresh
+            setShowStudentModal(false)
+            setEditingSet(null)
+            setEditingQuestions([])
+            loadQuestionSets()
+          }}
+        />
       )}
     </div>
   )
